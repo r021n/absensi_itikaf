@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batal Daftar - Reservasi Itikaf</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .search-container {
+            margin: 20px 0;
+        }
+        .search-input {
+            padding: 10px;
+            width: 60%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .search-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .search-btn:hover {
+            background-color: #45a049;
+        }
+        .results-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .result-item {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cancel-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            min-width: 120px;
+        }
+        .cancel-btn:hover {
+            background-color: #da190b;
+        }
+        .notification {
+            display: none;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .notification.success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .notification.error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        .loading {
+            display: none;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top: 2px solid transparent;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: translateY(-50%) rotate(0deg); }
+            100% { transform: translateY(-50%) rotate(360deg); }
+        }
+        .cancel-btn.loading-state {
+            padding-right: 32px;
+        }
+        .cancel-btn.loading-state .loading {
+            display: block;
+        }
+        .cancel-btn.loading-state:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pembatalan Pendaftaran Itikaf</h1>
+    
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="Masukkan nama untuk mencari...">
+        <button onclick="searchRegistrants()" class="search-btn">Cari</button>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <div id="searchResults" class="results-container"></div>
+
+    <script>
+        function searchRegistrants() {
+            const searchTerm = document.getElementById('searchInput').value;
+            if (!searchTerm) return;
+
+            fetch(`/search-registrants?name=${encodeURIComponent(searchTerm)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsContainer = document.getElementById('searchResults');
+                    resultsContainer.innerHTML = '';
+                    
+                    data.forEach(registrant => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'result-item';
+                        resultItem.innerHTML = `
+                            <div>
+                                <strong>${registrant.name}</strong><br>
+                                <small>Tanggal Reservasi: ${registrant.reservation_date}</small>
+                            </div>
+                            <button onclick="initiateCancel('${registrant.id}')" class="cancel-btn">
+                                Batalkan Daftar
+                                <div class="loading"></div>
+                            </button>
+                        `;
+                        resultsContainer.appendChild(resultItem);
+                    });
+
+                    if (data.length === 0) {
+                        resultsContainer.innerHTML = '<p>Tidak ada hasil yang ditemukan.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Terjadi kesalahan saat mencari data.', 'error');
+                });
+        }
+
+        function initiateCancel(registrantId) {
+            const button = event.target.closest('.cancel-btn');
+            button.classList.add('loading-state');
+            button.disabled = true;
+
+            fetch(`/initiate-cancellation/${registrantId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                button.classList.remove('loading-state');
+                button.disabled = false;
+                if (data.success) {
+                    showNotification('Email konfirmasi telah dikirim. Silakan cek email Anda untuk melanjutkan proses pembatalan.', 'success');
+                } else {
+                    showNotification(data.error || 'Terjadi kesalahan saat memproses pembatalan.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                button.classList.remove('loading-state');
+                button.disabled = false;
+                showNotification('Terjadi kesalahan saat memproses pembatalan.', 'error');
+            });
+        }
+
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
