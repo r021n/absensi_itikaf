@@ -423,6 +423,30 @@ app.post("/register", (req, res) => {
   );
 });
 
+app.get("/admin/add_data", isAuthenticated, (req, res) => {
+  res.render("add_data");
+});
+
+app.post("/admin/add_data", isAuthenticated, (req, res) => {
+  const { name, gender, reservation_date } = req.body;
+  const id = uuidv4();
+  const email = "main@mail.com";
+  const kehadiran = true;
+
+  db.run(
+    "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran) VALUES (?, ?, ?, ?, ?, ?)",
+    [id, name, email, gender, reservation_date, kehadiran],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      io.emit("statsUpdate");
+      res.json({ success: true });
+    }
+  );
+});
+
 // Catch-all middleware for undefined routes
 app.use((req, res) => {
   res.status(404).render("404");
