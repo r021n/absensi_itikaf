@@ -131,7 +131,7 @@
         <thead>
           <tr>
             <th>Tanggal</th>
-            <th>Total Pendaftar</th>
+            <!-- <th>Total Pendaftar</th> -->
             <th>Laki-laki</th>
             <th>Perempuan</th>
           </tr>
@@ -157,9 +157,8 @@
 
             row.innerHTML = `
                         <td>${date}</td>
-                        <td>${item.total}</td>
-                        <td>${item.male}</td>
-                        <td>${item.female}</td>
+                        <td>${50 - item.male}</td>
+                        <td>${70 - item.female}</td>
                     `;
             quotaList.appendChild(row);
           });
