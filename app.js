@@ -53,7 +53,8 @@ const db = new sqlite3.Database("reservations.db", (err) => {
       name TEXT NOT NULL,
       email TEXT NOT NULL,
       gender TEXT NOT NULL,
-      reservation_date TEXT NOT NULL
+      reservation_date TEXT NOT NULL,
+      kehadiran BOOLEAN DEFAULT 0
     )`);
   }
 });
@@ -64,21 +65,23 @@ io.on("connection", (socket) => {
 
   // Function to emit updated statistics
   const emitStats = () => {
+    const today = new Date().toISOString().split("T")[0];
+
     db.get(
-      "SELECT COUNT(*) as total FROM reservations",
-      [],
+      "SELECT COUNT(*) as total FROM reservations WHERE reservation_date = ?",
+      [today],
       (err, totalRow) => {
         if (err) return console.error(err);
 
         db.get(
-          "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki'",
-          [],
+          "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki' AND reservation_date = ?",
+          [today],
           (err, maleRow) => {
             if (err) return console.error(err);
 
             db.get(
-              "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan'",
-              [],
+              "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan' AND reservation_date = ?",
+              [today],
               (err, femaleRow) => {
                 if (err) return console.error(err);
 
@@ -102,6 +105,47 @@ io.on("connection", (socket) => {
 // Routes
 app.get("/", (req, res) => {
   res.render("halaman_awal");
+});
+
+app.get("/sisa-kuota", (req, res) => {
+  res.render("sisa_kuota");
+});
+
+app.get("/quota-data", async (req, res) => {
+  const today = new Date();
+  const endDate = new Date("2025-03-31");
+  const dates = [];
+
+  for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const currentDate = d.toISOString().split("T")[0];
+    dates.push(currentDate);
+  }
+
+  const quotaData = [];
+
+  for (const date of dates) {
+    const data = await new Promise((resolve, reject) => {
+      db.get(
+        "SELECT COUNT(*) as total, " +
+          "SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) as male, " +
+          "SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female " +
+          "FROM reservations WHERE reservation_date = ?",
+        [date],
+        (err, row) => {
+          if (err) reject(err);
+          resolve({
+            date,
+            total: row.total || 0,
+            male: row.male || 0,
+            female: row.female || 0,
+          });
+        }
+      );
+    });
+    quotaData.push(data);
+  }
+
+  res.json(quotaData);
 });
 
 // Admin routes
@@ -129,19 +173,26 @@ app.get("/admin/show_registrant", isAuthenticated, (req, res) => {
 });
 
 app.get("/admin/registrants", isAuthenticated, (req, res) => {
-  const { date, gender } = req.query;
+  const { date, gender, attendance } = req.query;
   let query = "SELECT * FROM reservations";
   const params = [];
+  const conditions = [];
 
-  if (date && gender) {
-    query += " WHERE reservation_date = ? AND gender = ?";
-    params.push(date, gender);
-  } else if (date) {
-    query += " WHERE reservation_date = ?";
+  if (date) {
+    conditions.push("reservation_date = ?");
     params.push(date);
-  } else if (gender) {
-    query += " WHERE gender = ?";
+  }
+  if (gender) {
+    conditions.push("gender = ?");
     params.push(gender);
+  }
+  if (attendance !== undefined && attendance !== "") {
+    conditions.push("kehadiran = ?");
+    params.push(attendance === "true" ? 1 : 0);
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
   }
 
   db.all(query, params, (err, rows) => {
@@ -151,6 +202,23 @@ app.get("/admin/registrants", isAuthenticated, (req, res) => {
     }
     res.json(rows);
   });
+});
+
+app.put("/admin/registrant/:id/attendance", isAuthenticated, (req, res) => {
+  const { id } = req.params;
+  const { kehadiran } = req.body;
+
+  db.run(
+    "UPDATE reservations SET kehadiran = ? WHERE id = ?",
+    [kehadiran, id],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      res.json({ success: true });
+    }
+  );
 });
 
 app.delete("/admin/registrant/:id", isAuthenticated, (req, res) => {
@@ -166,19 +234,26 @@ app.delete("/admin/registrant/:id", isAuthenticated, (req, res) => {
 });
 
 app.get("/admin/download", isAuthenticated, (req, res) => {
-  const { date, gender } = req.query;
+  const { date, gender, attendance } = req.query;
   let query = "SELECT * FROM reservations";
   const params = [];
+  const conditions = [];
 
-  if (date && gender) {
-    query += " WHERE reservation_date = ? AND gender = ?";
-    params.push(date, gender);
-  } else if (date) {
-    query += " WHERE reservation_date = ?";
+  if (date) {
+    conditions.push("reservation_date = ?");
     params.push(date);
-  } else if (gender) {
-    query += " WHERE gender = ?";
+  }
+  if (gender) {
+    conditions.push("gender = ?");
     params.push(gender);
+  }
+  if (attendance !== undefined && attendance !== "") {
+    conditions.push("kehadiran = ?");
+    params.push(attendance === "true" ? 1 : 0);
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
   }
 
   db.all(query, params, async (err, rows) => {
@@ -195,9 +270,11 @@ app.get("/admin/download", isAuthenticated, (req, res) => {
       { header: "Email", key: "email", width: 30 },
       { header: "Jenis Kelamin", key: "gender", width: 15 },
       { header: "Tanggal Reservasi", key: "reservation_date", width: 20 },
+      { header: "Kehadiran", key: "kehadiran", width: 15 },
     ];
 
     rows.forEach((row) => {
+      row.kehadiran = row.kehadiran ? "Hadir" : "Tidak Hadir";
       worksheet.addRow(row);
     });
 
@@ -322,8 +399,8 @@ app.post("/register", (req, res) => {
 
       // Insert new reservation
       db.run(
-        "INSERT INTO reservations (id, name, email, gender, reservation_date) VALUES (?, ?, ?, ?, ?)",
-        [id, name, email, gender, reservation_date],
+        "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran) VALUES (?, ?, ?, ?, ?, ?)",
+        [id, name, email, gender, reservation_date, false],
         (err) => {
           if (err) {
             console.error(err);
@@ -337,6 +414,11 @@ app.post("/register", (req, res) => {
       );
     }
   );
+});
+
+// Catch-all middleware for undefined routes
+app.use((req, res) => {
+  res.status(404).render("404");
 });
 
 // Start server

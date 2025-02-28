@@ -4,41 +4,122 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pembatalan Berhasil - Reservasi Itikaf</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
+        :root {
+            --primary-color: #4CAF50;
+            --primary-hover: #45a049;
+            --success-bg: #dff0d8;
+            --success-color: #3c763d;
+            --border-radius: 8px;
+            --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
         }
-        .success-message {
-            background-color: #dff0d8;
-            color: #3c763d;
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            border-radius: 4px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success-message {
+            background-color: var(--success-bg);
+            color: var(--success-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
             margin: 20px 0;
         }
+
+        h1 {
+            color: var(--success-color);
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+
         .home-btn {
-            background-color: #4CAF50;
+            background-color: var(--primary-color);
             color: white;
-            padding: 10px 20px;
+            padding: 12px 30px;
             border: none;
-            border-radius: 4px;
+            border-radius: var(--border-radius);
             text-decoration: none;
             display: inline-block;
-            margin-top: 20px;
+            font-weight: 500;
+            transition: var(--transition);
         }
+
         .home-btn:hover {
-            background-color: #45a049;
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .home-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            p {
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="success-message">
-        <h1>Pendaftaran Berhasil Dibatalkan</h1>
-        <p>Terima kasih telah menggunakan layanan kami.</p>
+    <div class="container">
+        <div class="success-message">
+            <h1>Pendaftaran Berhasil Dibatalkan</h1>
+            <p>Terima kasih telah menggunakan layanan kami.</p>
+        </div>
+        <a href="/" class="home-btn">Kembali ke Halaman Utama</a>
     </div>
-    <a href="/" class="home-btn">Kembali ke Halaman Utama</a>
 </body>
 </html>

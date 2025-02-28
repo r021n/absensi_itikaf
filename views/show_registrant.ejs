@@ -1,170 +1,459 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Daftar Peserta - Reservasi Itikaf</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+      :root {
+        --primary-color: #4caf50;
+        --danger-color: #f44336;
+        --info-color: #2196f3;
+        --success-color: #45a049;
+        --background-color: #f8f9fa;
+        --text-color: #2c3e50;
+        --border-color: #e9ecef;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --transition-fast: 0.15s ease;
+        --transition-normal: 0.3s ease;
+        --border-radius: 8px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        color: var(--text-color);
+      }
+
+      .filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .filter-group label {
+        font-weight: 500;
+        color: var(--text-color);
+        white-space: nowrap;
+      }
+
+      select,
+      input[type="date"] {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background-color: white;
+        color: var(--text-color);
+        font-size: 0.875rem;
+        transition: border-color var(--transition-fast);
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        padding-right: 2.5rem;
+      }
+
+      select:focus,
+      input[type="date"]:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+      }
+
+      .table-container {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      th,
+      td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      th {
+        background-color: white;
+        font-weight: 600;
+        color: var(--text-color);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      tr:hover td {
+        background-color: rgba(0, 0, 0, 0.02);
+      }
+
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .btn {
+        padding: 0.625rem 1rem;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-normal);
+        min-width: 100px;
+      }
+
+      .btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+      }
+
+      .btn-success {
+        background-color: var(--success-color);
+        color: white;
+      }
+
+      .btn-danger {
+        background-color: var(--danger-color);
+        color: white;
+      }
+
+      .btn-download {
+        background-color: var(--info-color);
+        color: white;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .logout-btn {
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
         }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      tr {
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 1rem;
+        }
+
         .filters {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 20px;
-            align-items: center;
+          padding: 1rem;
         }
+
         .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+          flex: 100%;
         }
-        select, input[type="date"] {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+
+        .table-container {
+          margin: 0 -1rem;
+          border-radius: 0;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
+
+        th,
+        td {
+          padding: 0.75rem;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f5f5f5;
-        }
+
         .actions {
-            display: flex;
-            gap: 10px;
+          flex-direction: column;
         }
+
         .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-            display: inline-block;
+          width: 100%;
         }
-        .btn-primary {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .btn-danger {
-            background-color: #f44336;
-            color: white;
-        }
-        .btn-download {
-            background-color: #2196F3;
-            color: white;
-        }
-        .btn:hover {
-            opacity: 0.9;
-        }
+
         .logout-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
+          position: static;
+          margin-bottom: 1rem;
+          width: 100%;
         }
+      }
+
+      @media (max-width: 480px) {
+        h1 {
+          font-size: 1.5rem;
+        }
+
+        .table-container {
+          overflow-x: auto;
+        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <a href="/admin/logout" class="btn btn-danger logout-btn">Logout</a>
     <h1>Daftar Peserta Itikaf</h1>
-    
+
     <div class="filters">
-        <div class="filter-group">
-            <label for="date">Tanggal:</label>
-            <input type="date" id="date" name="date">
-        </div>
-        <div class="filter-group">
-            <label for="gender">Jenis Kelamin:</label>
-            <select id="gender" name="gender">
-                <option value="">Semua</option>
-                <option value="laki-laki">Laki-laki</option>
-                <option value="perempuan">Perempuan</option>
-            </select>
-        </div>
-        <button class="btn btn-primary" onclick="applyFilters()">Terapkan Filter</button>
-        <button class="btn btn-download" onclick="downloadData()">Download Data</button>
+      <div class="filter-group">
+        <label for="search">Cari Nama:</label>
+        <input
+          type="text"
+          id="search"
+          name="search"
+          placeholder="Ketik nama peserta..."
+          style="
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: white;
+            color: var(--text-color);
+            font-size: 0.875rem;
+            transition: border-color var(--transition-fast);
+          "
+        />
+      </div>
+      <div class="filter-group">
+        <label for="date">Tanggal:</label>
+        <input type="date" id="date" name="date" />
+      </div>
+      <div class="filter-group">
+        <label for="gender">Jenis Kelamin:</label>
+        <select id="gender" name="gender">
+          <option value="">Semua</option>
+          <option value="laki-laki">Laki-laki</option>
+          <option value="perempuan">Perempuan</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="attendance">Kehadiran:</label>
+        <select id="attendance" name="attendance">
+          <option value="">Semua</option>
+          <option value="true">Hadir</option>
+          <option value="false">Tidak Hadir</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="applyFilters()">
+        Terapkan Filter
+      </button>
+      <button class="btn btn-download" onclick="downloadData()">
+        Download Data
+      </button>
     </div>
 
     <table id="registrantTable">
-        <thead>
-            <tr>
-                <th>Nama</th>
-                <th>Email</th>
-                <th>Jenis Kelamin</th>
-                <th>Tanggal Reservasi</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody id="registrantList">
-        </tbody>
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Email</th>
+          <th>Jenis Kelamin</th>
+          <th>Tanggal Reservasi</th>
+          <th>Kehadiran</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="registrantList"></tbody>
     </table>
 
     <script>
-        // Load initial data
-        loadRegistrants();
+      // Load initial data
+      loadRegistrants();
 
-        function loadRegistrants(date = '', gender = '') {
-            fetch(`/admin/registrants?date=${date}&gender=${gender}`)
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.getElementById('registrantList');
-                    tbody.innerHTML = '';
-                    
-                    data.forEach(registrant => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
+      // Add search input event listener
+      document.getElementById("search").addEventListener("input", function (e) {
+        applyFilters();
+      });
+
+      function formatDate(dateString) {
+        const months = [
+          "Januari",
+          "Februari",
+          "Maret",
+          "April",
+          "Mei",
+          "Juni",
+          "Juli",
+          "Agustus",
+          "September",
+          "Oktober",
+          "November",
+          "Desember",
+        ];
+        const date = new Date(dateString);
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        return `${day} ${month} ${year}`;
+      }
+
+      function loadRegistrants(date = "", gender = "", attendance = "") {
+        const searchQuery = document
+          .getElementById("search")
+          .value.toLowerCase();
+        fetch(
+          `/admin/registrants?date=${date}&gender=${gender}&attendance=${attendance}`
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            const tbody = document.getElementById("registrantList");
+            tbody.innerHTML = "";
+
+            const filteredData = data.filter((registrant) =>
+              registrant.name.toLowerCase().includes(searchQuery)
+            );
+
+            filteredData.forEach((registrant) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
                             <td>${registrant.name}</td>
                             <td>${registrant.email}</td>
                             <td>${registrant.gender}</td>
-                            <td>${registrant.reservation_date}</td>
+                            <td>${formatDate(registrant.reservation_date)}</td>
+                            <td>${
+                              registrant.kehadiran ? "Hadir" : "Tidak Hadir"
+                            }</td>
                             <td>
-                                <button class="btn btn-danger" onclick="deleteRegistrant('${registrant.id}')">Hapus</button>
+                                <div class="actions">
+                                    <button class="btn ${
+                                      registrant.kehadiran
+                                        ? "btn-primary"
+                                        : "btn-success"
+                                    }" onclick="toggleAttendance('${
+                registrant.id
+              }', ${!registrant.kehadiran})">
+                                        ${
+                                          registrant.kehadiran
+                                            ? "Batalkan Hadir"
+                                            : "Hadir"
+                                        }
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deleteRegistrant('${
+                                      registrant.id
+                                    }')">Hapus</button>
+                                </div>
                             </td>
                         `;
-                        tbody.appendChild(row);
-                    });
-                })
-                .catch(error => console.error('Error:', error));
-        }
+              tbody.appendChild(row);
+            });
+          })
+          .catch((error) => console.error("Error:", error));
+      }
 
-        function applyFilters() {
-            const date = document.getElementById('date').value;
-            const gender = document.getElementById('gender').value;
-            loadRegistrants(date, gender);
-        }
+      function applyFilters() {
+        const date = document.getElementById("date").value;
+        const gender = document.getElementById("gender").value;
+        const attendance = document.getElementById("attendance").value;
+        loadRegistrants(date, gender, attendance);
+      }
 
-        function deleteRegistrant(id) {
-            if (confirm('Apakah Anda yakin ingin menghapus peserta ini?')) {
-                fetch(`/admin/registrant/${id}`, {
-                    method: 'DELETE',
-                })
-                .then(response => {
-                    if (response.ok) {
-                        applyFilters(); // Reload the table
-                    } else {
-                        alert('Gagal menghapus peserta');
-                    }
-                })
-                .catch(error => console.error('Error:', error));
+      function deleteRegistrant(id) {
+        if (confirm("Apakah Anda yakin ingin menghapus peserta ini?")) {
+          fetch(`/admin/registrant/${id}`, {
+            method: "DELETE",
+          })
+            .then((response) => {
+              if (response.ok) {
+                applyFilters(); // Reload the table
+              } else {
+                alert("Gagal menghapus peserta");
+              }
+            })
+            .catch((error) => console.error("Error:", error));
+        }
+      }
+
+      function downloadData() {
+        const date = document.getElementById("date").value;
+        const gender = document.getElementById("gender").value;
+        const attendance = document.getElementById("attendance").value;
+        window.location.href = `/admin/download?date=${date}&gender=${gender}&attendance=${attendance}`;
+      }
+
+      function toggleAttendance(id, value) {
+        fetch(`/admin/registrant/${id}/attendance`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ kehadiran: value }),
+        })
+          .then((response) => {
+            if (response.ok) {
+              applyFilters(); // Reload the table
+            } else {
+              alert("Gagal mengubah status kehadiran");
             }
-        }
-
-        function downloadData() {
-            const date = document.getElementById('date').value;
-            const gender = document.getElementById('gender').value;
-            window.location.href = `/admin/download?date=${date}&gender=${gender}`;
-        }
+          })
+          .catch((error) => console.error("Error:", error));
+      }
     </script>
-</body>
+  </body>
 </html>

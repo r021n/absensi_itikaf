@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sisa Kuota - Reservasi Itikaf</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #4caf50;
+        --bg-color: #f9f9f9;
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --border-radius: 12px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Poppins", sans-serif;
+        background-color: var(--bg-color);
+        color: #333;
+        line-height: 1.6;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .container {
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        margin: 30px 0;
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 2.5rem;
+      }
+
+      .quota-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        background: white;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--box-shadow);
+      }
+
+      .quota-table th,
+      .quota-table td {
+        padding: 15px;
+        text-align: center;
+        border: 1px solid #ddd;
+      }
+
+      .quota-table th {
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: 500;
+      }
+
+      .quota-table tr:nth-child(even) {
+        background-color: #f8f9fa;
+      }
+
+      .quota-table tr:hover {
+        background-color: #f5f5f5;
+      }
+
+      .back-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: var(--primary-color);
+        color: white;
+        text-decoration: none;
+        border-radius: var(--border-radius);
+        margin: 20px 0;
+        transition: background-color 0.3s ease;
+      }
+
+      .back-btn:hover {
+        background-color: #3d8b40;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 10px;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .quota-table th,
+        .quota-table td {
+          padding: 10px;
+          font-size: 0.9rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        h1 {
+          font-size: 1.8rem;
+        }
+
+        .quota-table {
+          font-size: 0.8rem;
+        }
+
+        .quota-table th,
+        .quota-table td {
+          padding: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/" class="back-btn">Kembali ke Halaman Utama</a>
+      <h1>Sisa Kuota Pendaftaran Itikaf</h1>
+
+      <table class="quota-table">
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Total Pendaftar</th>
+            <th>Laki-laki</th>
+            <th>Perempuan</th>
+          </tr>
+        </thead>
+        <tbody id="quotaList"></tbody>
+      </table>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const response = await fetch("/quota-data");
+          const data = await response.json();
+          const quotaList = document.getElementById("quotaList");
+
+          data.forEach((item) => {
+            const row = document.createElement("tr");
+            const date = new Date(item.date).toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            });
+
+            row.innerHTML = `
+                        <td>${date}</td>
+                        <td>${item.total}</td>
+                        <td>${item.male}</td>
+                        <td>${item.female}</td>
+                    `;
+            quotaList.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Error fetching quota data:", error);
+        }
+      });
+    </script>
+  </body>
+</html>

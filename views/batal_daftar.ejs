@@ -1,195 +1,380 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Batal Daftar - Reservasi Itikaf</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
+      :root {
+        --primary-color: #4CAF50;
+        --primary-hover: #45a049;
+        --danger-color: #f44336;
+        --danger-hover: #da190b;
+        --success-bg: #dff0d8;
+        --success-color: #3c763d;
+        --error-bg: #f2dede;
+        --error-color: #a94442;
+        --border-radius: 8px;
+        --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        --transition: all 0.3s ease;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 40px auto;
+        background: white;
+        padding: 40px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+      }
+
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 40px;
+        font-weight: 600;
+        font-size: 2rem;
+      }
+
+      .search-container {
+        margin: 20px 0 30px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .search-input {
+        width: 100%;
+        max-width: 500px;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        transition: var(--transition);
+        font-family: inherit;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+      }
+
+      .search-btn {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: var(--transition);
+        font-family: inherit;
+      }
+
+      .search-btn:hover {
+        background-color: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+
+      .results-container {
+        margin-top: 30px;
+      }
+
+      .result-item {
+        background: white;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: var(--transition);
+      }
+
+      .result-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--box-shadow);
+      }
+
+      .result-info strong {
+        display: block;
+        color: #2c3e50;
+        font-size: 1.1rem;
+        margin-bottom: 5px;
+      }
+
+      .result-info small {
+        color: #666;
+      }
+
+      .cancel-btn {
+        background-color: var(--danger-color);
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 500;
+        position: relative;
+        min-width: 130px;
+        transition: var(--transition);
+        font-family: inherit;
+      }
+
+      .cancel-btn:hover:not(:disabled) {
+        background-color: var(--danger-hover);
+        transform: translateY(-1px);
+      }
+
+      .notification {
+        display: none;
+        padding: 15px 20px;
+        margin: 20px 0;
+        border-radius: var(--border-radius);
+        text-align: center;
+        animation: slideDown 0.3s ease;
+      }
+
+      .notification.success {
+        background-color: var(--success-bg);
+        color: var(--success-color);
+        border: 1px solid #d6e9c6;
+      }
+
+      .notification.error {
+        background-color: var(--error-bg);
+        color: var(--error-color);
+        border: 1px solid #ebccd1;
+      }
+
+      .loading {
+        display: none;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 2px solid white;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: translateY(-50%) rotate(0deg); }
+        100% { transform: translateY(-50%) rotate(360deg); }
+      }
+
+      @keyframes slideDown {
+        from { transform: translateY(-10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      .cancel-btn.loading-state {
+        padding-right: 40px;
+      }
+
+      .cancel-btn.loading-state .loading {
+        display: block;
+      }
+
+      .cancel-btn.loading-state:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 30px 20px;
+          margin: 20px auto;
         }
+
+        h1 {
+          font-size: 1.75rem;
+          margin-bottom: 30px;
+        }
+
         .search-container {
-            margin: 20px 0;
+          flex-direction: column;
         }
+
         .search-input {
-            padding: 10px;
-            width: 60%;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-right: 10px;
+          font-size: 0.95rem;
+          padding: 10px 16px;
         }
+
         .search-btn {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+          width: 100%;
+          padding: 12px;
         }
-        .search-btn:hover {
-            background-color: #45a049;
-        }
-        .results-container {
-            margin-top: 20px;
-            text-align: left;
-        }
+
         .result-item {
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+          flex-direction: column;
+          gap: 15px;
+          text-align: center;
         }
+
         .cancel-btn {
-            background-color: #f44336;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            position: relative;
-            min-width: 120px;
+          width: 100%;
         }
-        .cancel-btn:hover {
-            background-color: #da190b;
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 10px;
         }
-        .notification {
-            display: none;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-            text-align: center;
+
+        .container {
+          padding: 20px 15px;
         }
-        .notification.success {
-            background-color: #dff0d8;
-            color: #3c763d;
-            border: 1px solid #d6e9c6;
+
+        h1 {
+          font-size: 1.5rem;
         }
-        .notification.error {
-            background-color: #f2dede;
-            color: #a94442;
-            border: 1px solid #ebccd1;
-        }
-        .loading {
-            display: none;
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            border-top: 2px solid transparent;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: translateY(-50%) rotate(0deg); }
-            100% { transform: translateY(-50%) rotate(360deg); }
-        }
-        .cancel-btn.loading-state {
-            padding-right: 32px;
-        }
-        .cancel-btn.loading-state .loading {
-            display: block;
-        }
-        .cancel-btn.loading-state:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
+      }
     </style>
-</head>
-<body>
-    <h1>Pembatalan Pendaftaran Itikaf</h1>
-    
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-input" placeholder="Masukkan nama untuk mencari...">
+  </head>
+  <body>
+    <div class="container">
+      <h1>Pembatalan Pendaftaran Itikaf</h1>
+
+      <div class="search-container">
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Masukkan nama untuk mencari..."
+        />
         <button onclick="searchRegistrants()" class="search-btn">Cari</button>
+      </div>
+
+      <div id="notification" class="notification"></div>
+
+      <div id="searchResults" class="results-container"></div>
     </div>
 
-    <div id="notification" class="notification"></div>
-
-    <div id="searchResults" class="results-container"></div>
-
     <script>
-        function searchRegistrants() {
-            const searchTerm = document.getElementById('searchInput').value;
-            if (!searchTerm) return;
+      function formatDate(dateString) {
+        const months = [
+          "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+          "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+        const date = new Date(dateString);
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        return `${day} ${month} ${year}`;
+      }
 
-            fetch(`/search-registrants?name=${encodeURIComponent(searchTerm)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const resultsContainer = document.getElementById('searchResults');
-                    resultsContainer.innerHTML = '';
-                    
-                    data.forEach(registrant => {
-                        const resultItem = document.createElement('div');
-                        resultItem.className = 'result-item';
-                        resultItem.innerHTML = `
-                            <div>
-                                <strong>${registrant.name}</strong><br>
-                                <small>Tanggal Reservasi: ${registrant.reservation_date}</small>
-                            </div>
-                            <button onclick="initiateCancel('${registrant.id}')" class="cancel-btn">
-                                Batalkan Daftar
-                                <div class="loading"></div>
-                            </button>
-                        `;
-                        resultsContainer.appendChild(resultItem);
-                    });
+      function searchRegistrants() {
+        const searchTerm = document.getElementById("searchInput").value;
+        if (!searchTerm) return;
 
-                    if (data.length === 0) {
-                        resultsContainer.innerHTML = '<p>Tidak ada hasil yang ditemukan.</p>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('Terjadi kesalahan saat mencari data.', 'error');
-                });
-        }
+        fetch(`/search-registrants?name=${encodeURIComponent(searchTerm)}`)
+          .then((response) => response.json())
+          .then((data) => {
+            const resultsContainer = document.getElementById("searchResults");
+            resultsContainer.innerHTML = "";
 
-        function initiateCancel(registrantId) {
-            const button = event.target.closest('.cancel-btn');
-            button.classList.add('loading-state');
-            button.disabled = true;
-
-            fetch(`/initiate-cancellation/${registrantId}`, {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                button.classList.remove('loading-state');
-                button.disabled = false;
-                if (data.success) {
-                    showNotification('Email konfirmasi telah dikirim. Silakan cek email Anda untuk melanjutkan proses pembatalan.', 'success');
-                } else {
-                    showNotification(data.error || 'Terjadi kesalahan saat memproses pembatalan.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                button.classList.remove('loading-state');
-                button.disabled = false;
-                showNotification('Terjadi kesalahan saat memproses pembatalan.', 'error');
+            data.forEach((registrant) => {
+              const resultItem = document.createElement("div");
+              resultItem.className = "result-item";
+              resultItem.innerHTML = `
+                <div class="result-info">
+                  <strong>${registrant.name}</strong>
+                  <small>Tanggal Reservasi: ${formatDate(registrant.reservation_date)}</small>
+                </div>
+                <button onclick="initiateCancel('${registrant.id}')" class="cancel-btn">
+                  Batalkan Daftar
+                  <div class="loading"></div>
+                </button>
+              `;
+              resultsContainer.appendChild(resultItem);
             });
-        }
 
-        function showNotification(message, type) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.style.display = 'block';
+            if (data.length === 0) {
+              resultsContainer.innerHTML = "<p>Tidak ada hasil yang ditemukan.</p>";
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification("Terjadi kesalahan saat mencari data.", "error");
+          });
+      }
 
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 5000);
+      function initiateCancel(registrantId) {
+        const button = event.target.closest(".cancel-btn");
+        button.classList.add("loading-state");
+        button.disabled = true;
+
+        fetch(`/initiate-cancellation/${registrantId}`, {
+          method: "POST",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            button.classList.remove("loading-state");
+            button.disabled = false;
+            if (data.success) {
+              showNotification(
+                "Email konfirmasi telah dikirim. Silakan cek email Anda untuk melanjutkan proses pembatalan.",
+                "success"
+              );
+            } else {
+              showNotification(
+                data.error || "Terjadi kesalahan saat memproses pembatalan.",
+                "error"
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            button.classList.remove("loading-state");
+            button.disabled = false;
+            showNotification(
+              "Terjadi kesalahan saat memproses pembatalan.",
+              "error"
+            );
+          });
+      }
+
+      function showNotification(message, type) {
+        const notification = document.getElementById("notification");
+        notification.textContent = message;
+        notification.className = `notification ${type}`;
+        notification.style.display = "block";
+
+        setTimeout(() => {
+          notification.style.display = "none";
+        }, 5000);
+      }
+
+      // Add enter key support for search
+      document.getElementById("searchInput").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+          searchRegistrants();
         }
+      });
     </script>
-</body>
+  </body>
 </html>
