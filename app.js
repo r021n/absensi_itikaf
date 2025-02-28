@@ -385,16 +385,23 @@ app.post("/register", (req, res) => {
 
   // Check quota for the selected date
   db.get(
-    "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ?",
-    [reservation_date],
-    (err, row) => {
+    "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ?",
+    [reservation_date, gender],
+    (err, genderRow) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ error: "Database error" });
       }
 
-      if (row.count >= 4) {
-        return res.status(400).json({ error: "Maaf kuota penuh" });
+      const maleLimit = 50;
+      const femaleLimit = 70;
+      const currentCount = genderRow.count;
+      const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
+
+      if (currentCount >= limit) {
+        return res.status(400).json({
+          error: `Maaf, kuota untuk ${gender} pada tanggal tersebut sudah penuh`,
+        });
       }
 
       // Insert new reservation
