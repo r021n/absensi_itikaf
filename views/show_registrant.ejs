@@ -110,8 +110,58 @@
         border-radius: var(--border-radius);
         box-shadow: var(--shadow-md);
         overflow: hidden;
+        margin-bottom: 60px; /* Add space for the total counter */
       }
 
+      .total-counter {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: var(--primary-color);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        box-shadow: var(--shadow-sm);
+        z-index: 100;
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      .fab-add {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        text-decoration: none;
+        box-shadow: var(--shadow-md);
+        transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+        z-index: 100;
+      }
+
+      .fab-add:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .fab-add:active {
+        transform: translateY(0);
+      }
+      @media (max-width: 768px) {
+        .total-counter {
+          position: static;
+          margin: 1rem auto;
+          width: fit-content;
+          display: block;
+        }
+      }
       table {
         width: 100%;
         border-collapse: separate;
@@ -261,8 +311,9 @@
     <a href="/admin/logout" class="btn btn-danger logout-btn">Logout</a>
     <h1>Daftar Peserta Itikaf</h1>
 
-    <div class="filters">
-      <div class="filter-group">
+    <a href="/admin/add_data" target="_blank" class="fab-add" title="Tambah Data Baru">+</a>
+    <div class="filters" style="margin-bottom: 1rem">
+      <div class="filter-group" style="flex: 100%; margin-bottom: 1rem">
         <label for="search">Cari Nama:</label>
         <input
           type="text"
@@ -281,6 +332,9 @@
           "
         />
       </div>
+    </div>
+
+    <div class="filters">
       <div class="filter-group">
         <label for="date">Tanggal:</label>
         <input type="date" id="date" name="date" />
@@ -383,6 +437,16 @@
             const filteredData = data.filter((registrant) =>
               registrant.name.toLowerCase().includes(searchQuery)
             );
+
+            // Update total counter
+            const existingCounter = document.querySelector(".total-counter");
+            if (existingCounter) {
+              existingCounter.remove();
+            }
+            const totalCounter = document.createElement("div");
+            totalCounter.className = "total-counter";
+            totalCounter.textContent = `Total: ${filteredData.length} data`;
+            document.body.appendChild(totalCounter);
 
             filteredData.forEach((registrant) => {
               const row = document.createElement("tr");
