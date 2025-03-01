@@ -11,8 +11,5 @@
         "src": "/(.*)",
         "dest": "app.js"
       }
-    ],
-    "scripts": {
-      "start": "node app.js"
-    }
+    ]
   }
