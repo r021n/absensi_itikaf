@@ -53,6 +53,7 @@ const db = new sqlite3.Database("reservations.db", (err) => {
       name TEXT NOT NULL,
       email TEXT NOT NULL,
       gender TEXT NOT NULL,
+      pendaftaran TEXT NOT NULL,
       reservation_date TEXT NOT NULL,
       kehadiran BOOLEAN DEFAULT 0
     )`);
@@ -397,6 +398,7 @@ app.post("/register", (req, res) => {
       const femaleLimit = 70;
       const currentCount = genderRow.count;
       const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
+      const pendaftaran = "online";
 
       if (currentCount >= limit) {
         return res.status(400).json({
@@ -406,8 +408,8 @@ app.post("/register", (req, res) => {
 
       // Insert new reservation
       db.run(
-        "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran) VALUES (?, ?, ?, ?, ?, ?)",
-        [id, name, email, gender, reservation_date, false],
+        "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [id, name, email, gender, reservation_date, false, pendaftaran],
         (err) => {
           if (err) {
             console.error(err);
@@ -431,11 +433,12 @@ app.post("/admin/add_data", isAuthenticated, (req, res) => {
   const { name, gender, reservation_date } = req.body;
   const id = uuidv4();
   const email = "main@mail.com";
+  const pendaftaran = "offline";
   const kehadiran = true;
 
   db.run(
-    "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran) VALUES (?, ?, ?, ?, ?, ?)",
-    [id, name, email, gender, reservation_date, kehadiran],
+    "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [id, name, email, gender, reservation_date, kehadiran, pendaftaran],
     (err) => {
       if (err) {
         console.error(err);

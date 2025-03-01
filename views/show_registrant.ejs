@@ -315,6 +315,7 @@
           <th>Nama</th>
           <th>Email</th>
           <th>Jenis Kelamin</th>
+          <th>Jenis Pendaftaran</th>
           <th>Tanggal Reservasi</th>
           <th>Kehadiran</th>
           <th>Aksi</th>
@@ -376,6 +377,7 @@
                             <td>${registrant.name}</td>
                             <td>${registrant.email}</td>
                             <td>${registrant.gender}</td>
+                            <td>${registrant.pendaftaran}</td>
                             <td>${formatDate(registrant.reservation_date)}</td>
                             <td>${
                               registrant.kehadiran ? "Hadir" : "Tidak Hadir"
