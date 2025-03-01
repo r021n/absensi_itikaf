@@ -230,7 +230,9 @@
 
             <div class="form-group">
                 <label for="reservation_date">Tanggal Reservasi:</label>
-                <input type="date" id="reservation_date" name="reservation_date" required>
+                <select id="reservation_date" name="reservation_date" required>
+                    <option value="">Pilih Tanggal Itikaf</option>
+                </select>
             </div>
 
             <button type="submit">
@@ -287,9 +289,25 @@
             }
         });
 
-        // Set minimum date to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('reservation_date').min = today;
+        // Function to format date as DD/MM/YYYY
+        function formatDate(date) {
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // Populate the reservation date dropdown
+        const reservationSelect = document.getElementById('reservation_date');
+        const today = new Date('2025-03-21');
+        const endDate = new Date('2025-03-30');
+
+        for (let date = new Date(today); date <= endDate; date.setDate(date.getDate() + 1)) {
+            const option = document.createElement('option');
+            option.value = date.toISOString().split('T')[0]; // Store date in YYYY-MM-DD format
+            option.textContent = formatDate(new Date(date)); // Display in DD/MM/YYYY format
+            reservationSelect.appendChild(option);
+        }
     </script>
 </div>
 </body>
