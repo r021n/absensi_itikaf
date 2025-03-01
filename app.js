@@ -174,7 +174,7 @@ app.get("/admin/show_registrant", isAuthenticated, (req, res) => {
 });
 
 app.get("/admin/registrants", isAuthenticated, (req, res) => {
-  const { date, gender, attendance } = req.query;
+  const { date, gender, attendance, pendaftaran } = req.query;
   let query = "SELECT * FROM reservations";
   const params = [];
   const conditions = [];
@@ -190,6 +190,10 @@ app.get("/admin/registrants", isAuthenticated, (req, res) => {
   if (attendance !== undefined && attendance !== "") {
     conditions.push("kehadiran = ?");
     params.push(attendance === "true" ? 1 : 0);
+  }
+  if (pendaftaran) {
+    conditions.push("pendaftaran = ?");
+    params.push(pendaftaran);
   }
 
   if (conditions.length > 0) {
@@ -235,7 +239,7 @@ app.delete("/admin/registrant/:id", isAuthenticated, (req, res) => {
 });
 
 app.get("/admin/download", isAuthenticated, (req, res) => {
-  const { date, gender, attendance } = req.query;
+  const { date, gender, attendance, pendaftaran } = req.query;
   let query = "SELECT * FROM reservations";
   const params = [];
   const conditions = [];
@@ -251,6 +255,10 @@ app.get("/admin/download", isAuthenticated, (req, res) => {
   if (attendance !== undefined && attendance !== "") {
     conditions.push("kehadiran = ?");
     params.push(attendance === "true" ? 1 : 0);
+  }
+  if (pendaftaran) {
+    conditions.push("pendaftaran = ?");
+    params.push(pendaftaran);
   }
 
   if (conditions.length > 0) {
@@ -270,6 +278,7 @@ app.get("/admin/download", isAuthenticated, (req, res) => {
       { header: "Nama", key: "name", width: 30 },
       { header: "Email", key: "email", width: 30 },
       { header: "Jenis Kelamin", key: "gender", width: 15 },
+      { header: "Jenis Pendaftaran", key: "pendaftaran", width: 17 },
       { header: "Tanggal Reservasi", key: "reservation_date", width: 20 },
       { header: "Kehadiran", key: "kehadiran", width: 15 },
     ];

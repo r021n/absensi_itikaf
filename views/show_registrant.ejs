@@ -294,6 +294,14 @@
         </select>
       </div>
       <div class="filter-group">
+        <label for="pendaftaran">Jenis Pendaftaran:</label>
+        <select id="pendaftaran" name="pendaftaran">
+          <option value="">Semua</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
+      <div class="filter-group">
         <label for="attendance">Kehadiran:</label>
         <select id="attendance" name="attendance">
           <option value="">Semua</option>
@@ -355,12 +363,17 @@
         return `${day} ${month} ${year}`;
       }
 
-      function loadRegistrants(date = "", gender = "", attendance = "") {
+      function loadRegistrants(
+        date = "",
+        gender = "",
+        attendance = "",
+        pendaftaran = ""
+      ) {
         const searchQuery = document
           .getElementById("search")
           .value.toLowerCase();
         fetch(
-          `/admin/registrants?date=${date}&gender=${gender}&attendance=${attendance}`
+          `/admin/registrants?date=${date}&gender=${gender}&attendance=${attendance}&pendaftaran=${pendaftaran}`
         )
           .then((response) => response.json())
           .then((data) => {
@@ -413,7 +426,8 @@
         const date = document.getElementById("date").value;
         const gender = document.getElementById("gender").value;
         const attendance = document.getElementById("attendance").value;
-        loadRegistrants(date, gender, attendance);
+        const pendaftaran = document.getElementById("pendaftaran").value;
+        loadRegistrants(date, gender, attendance, pendaftaran);
       }
 
       function deleteRegistrant(id) {
@@ -436,7 +450,8 @@
         const date = document.getElementById("date").value;
         const gender = document.getElementById("gender").value;
         const attendance = document.getElementById("attendance").value;
-        window.location.href = `/admin/download?date=${date}&gender=${gender}&attendance=${attendance}`;
+        const pendaftaran = document.getElementById("pendaftaran").value;
+        window.location.href = `/admin/download?date=${date}&gender=${gender}&attendance=${attendance}&pendaftaran=${pendaftaran}`;
       }
 
       function toggleAttendance(id, value) {
