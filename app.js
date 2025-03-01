@@ -8,6 +8,8 @@ const session = require("express-session");
 const bcrypt = require("bcryptjs");
 const ExcelJS = require("exceljs");
 const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
@@ -330,7 +332,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "rozinabdul@student.uns.ac.id", // Replace with your email
-    pass: "", // Replace with your app password
+    pass: process.env.EMAIL_PASS, // Use EMAIL_PASS from .env
   },
 });
 
