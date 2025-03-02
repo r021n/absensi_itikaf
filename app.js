@@ -68,23 +68,29 @@ io.on("connection", (socket) => {
 
   // Function to emit updated statistics
   const emitStats = () => {
-    const today = new Date().toISOString().split("T")[0];
+    // const today = new Date().toISOString().split("T")[0];
 
     db.get(
-      "SELECT COUNT(*) as total FROM reservations WHERE reservation_date = ?",
-      [today],
+      "SELECT COUNT(*) as total FROM reservations",
+
+      // "SELECT COUNT(*) as total FROM reservations WHERE reservation_date = ?",
+      // [today],
       (err, totalRow) => {
         if (err) return console.error(err);
 
         db.get(
-          "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki' AND reservation_date = ?",
-          [today],
+          "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki'",
+
+          // "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki' AND reservation_date = ?",
+          // [today],
           (err, maleRow) => {
             if (err) return console.error(err);
 
             db.get(
-              "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan' AND reservation_date = ?",
-              [today],
+              "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan'",
+
+              // "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan' AND reservation_date = ?",
+              // [today],
               (err, femaleRow) => {
                 if (err) return console.error(err);
 
@@ -115,7 +121,7 @@ app.get("/sisa-kuota", (req, res) => {
 });
 
 app.get("/quota-data", async (req, res) => {
-  const today = new Date();
+  const today = new Date("2025-03-21");
   const endDate = new Date("2025-03-31");
   const dates = [];
 
