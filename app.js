@@ -394,11 +394,12 @@ app.get("/cancel/:id", (req, res) => {
 app.post("/register", (req, res) => {
   const { name, email, gender, reservation_date } = req.body;
   const id = uuidv4();
+  const pendaftaran = "online";
 
   // Check quota for the selected date
   db.get(
-    "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ?",
-    [reservation_date, gender],
+    "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ? AND pendaftaran = ?",
+    [reservation_date, gender, pendaftaran],
     (err, genderRow) => {
       if (err) {
         console.error(err);
@@ -409,7 +410,6 @@ app.post("/register", (req, res) => {
       const femaleLimit = 70;
       const currentCount = genderRow.count;
       const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
-      const pendaftaran = "online";
 
       if (currentCount >= limit) {
         return res.status(400).json({
