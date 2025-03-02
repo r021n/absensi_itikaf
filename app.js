@@ -132,8 +132,8 @@ app.get("/quota-data", async (req, res) => {
         "SELECT COUNT(*) as total, " +
           "SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) as male, " +
           "SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female " +
-          "FROM reservations WHERE reservation_date = ?",
-        [date],
+          "FROM reservations WHERE reservation_date = ? AND pendaftaran = ?",
+        [date, "online"],
         (err, row) => {
           if (err) reject(err);
           resolve({
