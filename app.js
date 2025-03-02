@@ -355,7 +355,7 @@ app.post("/initiate-cancellation/:id", (req, res) => {
       return res.status(404).json({ error: "Pendaftaran tidak ditemukan" });
     }
 
-    const cancelUrl = `http://localhost:3000/cancel/${id}`;
+    const cancelUrl = `http://202.10.40.249:3000/cancel/${id}`;
     const mailOptions = {
       from: "rozinabdul@student.uns.ac.id",
       to: row.email,
