@@ -22,11 +22,19 @@ app.set("views", path.join(__dirname, "views"));
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Configure session with proper settings to prevent memory leaks
 app.use(
   session({
-    secret: "your-secret-key",
+    secret: process.env.SESSION_SECRET || "your-secret-key",
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+    rolling: true,
   })
 );
 
@@ -69,48 +77,83 @@ io.on("connection", (socket) => {
   console.log("Client connected");
 
   // Function to emit updated statistics
-  const emitStats = () => {
-    // const today = new Date().toISOString().split("T")[0];
+  const emitStats = async () => {
+    try {
+      const [totalRow, maleRow, femaleRow] = await Promise.all([
+        new Promise((resolve, reject) => {
+          db.get("SELECT COUNT(*) as total FROM reservations", (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.get(
+            "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki'",
+            (err, row) => {
+              if (err) reject(err);
+              else resolve(row);
+            }
+          );
+        }),
+        new Promise((resolve, reject) => {
+          db.get(
+            "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan'",
+            (err, row) => {
+              if (err) reject(err);
+              else resolve(row);
+            }
+          );
+        }),
+      ]);
 
-    db.get(
-      "SELECT COUNT(*) as total FROM reservations",
-
-      // "SELECT COUNT(*) as total FROM reservations WHERE reservation_date = ?",
-      // [today],
-      (err, totalRow) => {
-        if (err) return console.error(err);
-
-        db.get(
-          "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki'",
-
-          // "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki' AND reservation_date = ?",
-          // [today],
-          (err, maleRow) => {
-            if (err) return console.error(err);
-
-            db.get(
-              "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan'",
-
-              // "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan' AND reservation_date = ?",
-              // [today],
-              (err, femaleRow) => {
-                if (err) return console.error(err);
-
-                socket.emit("stats", {
-                  total: totalRow.total,
-                  male: maleRow.male,
-                  female: femaleRow.female,
-                });
-              }
-            );
-          }
-        );
-      }
-    );
+      socket.emit("stats", {
+        total: totalRow.total,
+        male: maleRow.male,
+        female: femaleRow.female,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
   };
 
   // Emit initial stats
   emitStats();
+
+  // Clean up on disconnect
+  socket.on("disconnect", () => {
+    console.log("Client disconnected");
+  });
+});
+
+// Graceful shutdown handling
+process.on("SIGTERM", () => {
+  console.log("Received SIGTERM. Performing graceful shutdown...");
+  server.close(() => {
+    console.log("HTTP server closed");
+    db.close((err) => {
+      if (err) {
+        console.error("Error closing database:", err);
+      } else {
+        console.log("Database connection closed");
+      }
+      process.exit(0);
+    });
+  });
+});
+
+process.on("SIGINT", () => {
+  console.log("Received SIGINT. Performing graceful shutdown...");
+  server.close(() => {
+    console.log("HTTP server closed");
+    db.close((err) => {
+      if (err) {
+        console.error("Error closing database:", err);
+      } else {
+        console.log("Database connection closed");
+      }
+      process.exit(0);
+    });
+  });
 });
 
 // Routes
@@ -403,57 +446,87 @@ app.get("/cancel/:id", (req, res) => {
 
 app.post("/register", (req, res) => {
   const { name, email, gender, city, number, reservation_date } = req.body;
-  const id = uuidv4();
   const pendaftaran = "online";
+  const maleLimit = 50;
+  const femaleLimit = 70;
 
-  // Check quota for the selected date
-  db.get(
-    "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ? AND pendaftaran = ?",
-    [reservation_date, gender, pendaftaran],
-    (err, genderRow) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Database error" });
-      }
+  // Begin transaction
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
 
-      const maleLimit = 50;
-      const femaleLimit = 70;
-      const currentCount = genderRow.count;
-      const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
+    let hasError = false;
+    let quotaError = false;
+    let errorDate = null;
 
-      if (currentCount >= limit) {
-        return res.status(400).json({
-          error: `Maaf, kuota untuk ${gender} pada tanggal tersebut sudah penuh`,
-        });
-      }
-
-      // Insert new reservation
-      db.run(
-        "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          id,
-          name,
-          email,
-          city,
-          number,
-          gender,
-          reservation_date,
-          false,
-          pendaftaran,
-        ],
-        (err) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ error: "Database error" });
+    // Check quota for all selected dates
+    const checkQuotas = reservation_date.map((date) => {
+      return new Promise((resolve, reject) => {
+        db.get(
+          "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ? AND pendaftaran = ?",
+          [date, gender, pendaftaran],
+          (err, genderRow) => {
+            if (err) {
+              hasError = true;
+              reject(err);
+            } else {
+              const currentCount = genderRow.count;
+              const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
+              if (currentCount >= limit) {
+                quotaError = true;
+                errorDate = date;
+                reject(new Error(`Quota exceeded for date ${date}`));
+              } else {
+                resolve();
+              }
+            }
           }
+        );
+      });
+    });
 
-          // Emit updated stats to all connected clients
-          io.emit("statsUpdate");
-          res.redirect("/");
+    Promise.all(checkQuotas)
+      .then(() => {
+        // If all quota checks pass, insert reservations for each date
+        const insertPromises = reservation_date.map((date) => {
+          const id = uuidv4();
+          return new Promise((resolve, reject) => {
+            db.run(
+              "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [id, name, email, city, number, gender, date, false, pendaftaran],
+              (err) => {
+                if (err) {
+                  hasError = true;
+                  reject(err);
+                } else {
+                  resolve();
+                }
+              }
+            );
+          });
+        });
+
+        return Promise.all(insertPromises);
+      })
+      .then(() => {
+        if (hasError) {
+          db.run("ROLLBACK");
+          return res.status(500).json({ error: "Database error" });
         }
-      );
-    }
-  );
+        db.run("COMMIT");
+        io.emit("statsUpdate");
+        res.redirect("/");
+      })
+      .catch((error) => {
+        db.run("ROLLBACK");
+        if (quotaError) {
+          return res.status(400).json({
+            error: `Maaf, kuota untuk ${gender} pada tanggal ${errorDate} sudah penuh`,
+          });
+        }
+        console.error(error);
+        return res.status(500).json({ error: "Database error" });
+      });
+  });
 });
 
 app.get("/admin/add_data", isAuthenticated, (req, res) => {
@@ -461,15 +534,25 @@ app.get("/admin/add_data", isAuthenticated, (req, res) => {
 });
 
 app.post("/admin/add_data", isAuthenticated, (req, res) => {
-  const { name, gender, reservation_date } = req.body;
+  const { name, gender, reservation_date, city, number } = req.body;
   const id = uuidv4();
   const email = "main@mail.com";
   const pendaftaran = "offline";
   const kehadiran = true;
 
   db.run(
-    "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [id, name, email, gender, reservation_date, kehadiran, pendaftaran],
+    "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [
+      id,
+      name,
+      email,
+      city,
+      number,
+      gender,
+      reservation_date,
+      kehadiran,
+      pendaftaran,
+    ],
     (err) => {
       if (err) {
         console.error(err);
