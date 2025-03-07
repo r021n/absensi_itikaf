@@ -142,7 +142,8 @@
         font-size: 24px;
         text-decoration: none;
         box-shadow: var(--shadow-md);
-        transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+        transition: transform var(--transition-normal),
+          box-shadow var(--transition-normal);
         z-index: 100;
       }
 
@@ -311,7 +312,13 @@
     <a href="/admin/logout" class="btn btn-danger logout-btn">Logout</a>
     <h1>Daftar Peserta Itikaf</h1>
 
-    <a href="/admin/add_data" target="_blank" class="fab-add" title="Tambah Data Baru">+</a>
+    <a
+      href="/admin/add_data"
+      target="_blank"
+      class="fab-add"
+      title="Tambah Data Baru"
+      >+</a
+    >
     <div class="filters" style="margin-bottom: 1rem">
       <div class="filter-group" style="flex: 100%; margin-bottom: 1rem">
         <label for="search">Cari Nama:</label>
@@ -378,6 +385,8 @@
           <th>Email</th>
           <th>Jenis Kelamin</th>
           <th>Jenis Pendaftaran</th>
+          <th>Kota</th>
+          <th>Nomor WA</th>
           <th>Tanggal Reservasi</th>
           <th>Kehadiran</th>
           <th>Aksi</th>
@@ -455,6 +464,8 @@
                             <td>${registrant.email}</td>
                             <td>${registrant.gender}</td>
                             <td>${registrant.pendaftaran}</td>
+                            <td>${registrant.city}</td>
+                            <td>${registrant.number}</td>
                             <td>${formatDate(registrant.reservation_date)}</td>
                             <td>${
                               registrant.kehadiran ? "Hadir" : "Tidak Hadir"
