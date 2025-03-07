@@ -54,6 +54,8 @@ const db = new sqlite3.Database("reservations.db", (err) => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
+      city TEXT NOT NULL,
+      number TEXT NOT NULL,
       gender TEXT NOT NULL,
       pendaftaran TEXT NOT NULL,
       reservation_date TEXT NOT NULL,
@@ -287,6 +289,8 @@ app.get("/admin/download", isAuthenticated, (req, res) => {
       { header: "Email", key: "email", width: 30 },
       { header: "Jenis Kelamin", key: "gender", width: 15 },
       { header: "Jenis Pendaftaran", key: "pendaftaran", width: 17 },
+      { header: "Kota Asal", key: "city", width: 20 },
+      { header: "Nomor WA", key: "number", width: 20 },
       { header: "Tanggal Reservasi", key: "reservation_date", width: 20 },
       { header: "Kehadiran", key: "kehadiran", width: 15 },
     ];
@@ -398,7 +402,7 @@ app.get("/cancel/:id", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-  const { name, email, gender, reservation_date } = req.body;
+  const { name, email, gender, city, number, reservation_date } = req.body;
   const id = uuidv4();
   const pendaftaran = "online";
 
@@ -425,8 +429,18 @@ app.post("/register", (req, res) => {
 
       // Insert new reservation
       db.run(
-        "INSERT INTO reservations (id, name, email, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [id, name, email, gender, reservation_date, false, pendaftaran],
+        "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          id,
+          name,
+          email,
+          city,
+          number,
+          gender,
+          reservation_date,
+          false,
+          pendaftaran,
+        ],
         (err) => {
           if (err) {
             console.error(err);
