@@ -167,7 +167,7 @@ app.get("/sisa-kuota", (req, res) => {
 
 app.get("/quota-data", async (req, res) => {
   const today = new Date("2025-03-21");
-  const endDate = new Date("2025-03-31");
+  const endDate = new Date("2025-03-30");
   const dates = [];
 
   for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
