@@ -373,8 +373,8 @@
 
         // Populate the date checkboxes
         const dateGrid = document.getElementById('date-grid');
-        const today = new Date('2025-03-21');
-        const endDate = new Date('2025-03-30');
+        const today = new Date('2025-03-20');
+        const endDate = new Date('2025-03-29');
 
         for (let date = new Date(today); date <= endDate; date.setDate(date.getDate() + 1)) {
             const { formatted, isOdd } = formatDate(new Date(date));
