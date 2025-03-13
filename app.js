@@ -8,6 +8,8 @@ const session = require("express-session");
 const bcrypt = require("bcryptjs");
 const ExcelJS = require("exceljs");
 const nodemailer = require("nodemailer");
+const QRCode = require("qrcode");
+const fs = require("fs");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -156,6 +158,15 @@ process.on("SIGINT", () => {
   });
 });
 
+// Create a nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "rozinabdul@student.uns.ac.id", // Replace with your email
+    pass: process.env.EMAIL_PASS, // Use EMAIL_PASS from .env
+  },
+});
+
 // Routes
 app.get("/", (req, res) => {
   res.render("halaman_awal");
@@ -204,7 +215,11 @@ app.get("/quota-data", async (req, res) => {
 
 // Admin routes
 app.get("/admin/login", (req, res) => {
-  res.render("login_admin");
+  if (req.session.isAuthenticated) {
+    res.redirect("/admin/show_registrant");
+  } else {
+    res.render("login_admin");
+  }
 });
 
 app.post("/admin/login", (req, res) => {
@@ -380,15 +395,6 @@ app.get("/search-registrants", (req, res) => {
   );
 });
 
-// Create a nodemailer transporter
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "rozinabdul@student.uns.ac.id", // Replace with your email
-    pass: process.env.EMAIL_PASS, // Use EMAIL_PASS from .env
-  },
-});
-
 app.post("/initiate-cancellation/:id", (req, res) => {
   const { id } = req.params;
 
@@ -449,6 +455,47 @@ app.post("/register", (req, res) => {
   const pendaftaran = "online";
   const maleLimit = 50;
   const femaleLimit = 70;
+  const qrAttachments = [];
+
+  // helper function
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const months = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  // helper function to generate QR Code
+  const generateQRCode = async (id, date) => {
+    const fileName = `${formatDate(date)}_${name}.png`;
+    const filePath = path.join(__dirname, "temp", fileName);
+
+    // Ensure temp dirextory exists
+    if (!fs.existsSync(path.join(__dirname, "temp"))) {
+      fs.mkdirSync(path.join(__dirname, "temp"));
+    }
+
+    // generate qr code
+    await QRCode.toFile(filePath, id);
+
+    return {
+      filename: fileName,
+      path: filePath,
+      cid: id,
+    };
+  };
 
   // Begin transaction
   db.serialize(() => {
@@ -473,7 +520,7 @@ app.post("/register", (req, res) => {
               const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
               if (currentCount >= limit) {
                 quotaError = true;
-                errorDate = date;
+                errorDate = formatDate(date);
                 reject(new Error(`Quota exceeded for date ${date}`));
               } else {
                 resolve();
@@ -489,34 +536,102 @@ app.post("/register", (req, res) => {
         // If all quota checks pass, insert reservations for each date
         const insertPromises = reservation_date.map((date) => {
           const id = uuidv4();
-          return new Promise((resolve, reject) => {
-            db.run(
-              "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              [id, name, email, city, number, gender, date, false, pendaftaran],
-              (err) => {
-                if (err) {
-                  hasError = true;
-                  reject(err);
-                } else {
-                  resolve();
+          return new Promise(async (resolve, reject) => {
+            try {
+              // generate qr code first
+              const qrAttachment = await generateQRCode(id, date);
+              qrAttachments.push(qrAttachment);
+
+              // then insert into database
+              db.run(
+                "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                  id,
+                  name,
+                  email,
+                  city,
+                  number,
+                  gender,
+                  date,
+                  false,
+                  pendaftaran,
+                ],
+                (err) => {
+                  if (err) {
+                    hasError = true;
+                    reject(err);
+                  } else {
+                    resolve();
+                  }
                 }
-              }
-            );
+              );
+            } catch (error) {
+              hasError = true;
+              reject(error);
+            }
           });
         });
 
         return Promise.all(insertPromises);
       })
-      .then(() => {
+      .then(async () => {
         if (hasError) {
+          // Delete all QR codes if there's an error
+          qrAttachments.forEach((attachment) => {
+            if (fs.existsSync(attachment.path)) {
+              fs.unlinkSync(attachment.path);
+            }
+          });
           db.run("ROLLBACK");
           return res.status(500).json({ error: "Database error" });
         }
-        db.run("COMMIT");
-        io.emit("statsUpdate");
-        res.redirect("/");
+
+        // send email with qr codes
+        const mailOptions = {
+          from: "rozinabdul@student.uns.ac.id",
+          to: email,
+          subject: "QR Code pendaftaran Itikaf",
+          html: `            <h2>QR Code Pendaftaran Itikaf</h2>
+            <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
+            ${qrAttachments
+              .map(
+                (att) => `
+              <p>QR Code untuk tanggal ${att.filename.split("_")[0]}:</p>
+              <img src="cid:${att.cid}" alt="QR Code">
+            `
+              )
+              .join("")}
+            <p>Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
+          `,
+          attachments: qrAttachments,
+        };
+
+        try {
+          await transporter.sendMail(mailOptions);
+
+          // Delete all QR codes after email is sent
+          qrAttachments.forEach((attachment) => {
+            if (fs.existsSync(attachment.path)) {
+              fs.unlinkSync(attachment.path);
+            }
+          });
+          db.run("COMMIT");
+          io.emit("statsUpdate");
+          res.redirect("/");
+        } catch (error) {
+          console.error("Error sending email: ", error);
+          db.run("ROLLBACK");
+          res.status(500).json({ error: "Gagal mengirim email" });
+        }
       })
       .catch((error) => {
+        // Clean up generated QR code
+        qrAttachments.forEach((attachment) => {
+          if (fs.existsSync(attachment.path)) {
+            fs.unlinkSync(attachment.path);
+          }
+        });
+
         db.run("ROLLBACK");
         if (quotaError) {
           return res.status(400).json({
@@ -553,6 +668,43 @@ app.post("/admin/add_data", isAuthenticated, (req, res) => {
       kehadiran,
       pendaftaran,
     ],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      io.emit("statsUpdate");
+      res.json({ success: true });
+    }
+  );
+});
+
+// QR Code scanning routes
+app.get("/cek-kehadiran", isAuthenticated, (req, res) => {
+  res.render("cek_kehadiran");
+});
+
+app.get("/get-attendee/:id", (req, res) => {
+  const { id } = req.params;
+  db.get("SELECT * FROM reservations WHERE id = ?", [id], (err, row) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (!row) {
+      return res.status(404).json({ error: "Data tidak ditemukan" });
+    }
+    res.json(row);
+  });
+});
+
+app.put("/update-attendance/:id", (req, res) => {
+  const { id } = req.params;
+  const { kehadiran } = req.body;
+
+  db.run(
+    "UPDATE reservations SET kehadiran = ? WHERE id = ?",
+    [kehadiran, id],
     (err) => {
       if (err) {
         console.error(err);
