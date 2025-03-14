@@ -446,7 +446,7 @@ app.post("/initiate-cancellation/:id", (req, res) => {
 
     const cancelUrl = `${req.protocol}://${req.get("host")}/cancel/${id}`;
     const mailOptions = {
-      from: "<no-reply>badarmsaofficial@gmail.com",
+      from: "badarmsaofficial@gmail.com",
       to: row.email,
       subject: "Konfirmasi Pembatalan Pendaftaran Itikaf",
       html: `
@@ -624,7 +624,7 @@ app.post("/register", (req, res) => {
 
         // send email with qr codes
         const mailOptions = {
-          from: "<no-reply>badarmsaofficial@gmail.com",
+          from: "badarmsaofficial@gmail.com",
           to: email,
           subject: "QR Code pendaftaran Itikaf",
           html: `            <h2>QR Code Pendaftaran Itikaf</h2>
