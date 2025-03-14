@@ -75,6 +75,10 @@
         background-color: #f5f5f5;
       }
 
+      .quota-table td:first-child {
+        text-align: left;
+      }
+
       .back-btn {
         display: inline-block;
         padding: 10px 20px;
@@ -138,30 +142,56 @@
         </thead>
         <tbody id="quotaList"></tbody>
       </table>
+
+      <h1>Sisa Kuota Pendaftaran Itikaf Ditempat(Offline)</h1>
+
+      <table class="quota-table">
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <!-- <th>Total Pendaftar</th> -->
+            <th>Laki-laki</th>
+            <th>Perempuan</th>
+          </tr>
+        </thead>
+        <tbody id="quotaListOff"></tbody>
+      </table>
     </div>
 
     <script>
+      const quotaList = document.getElementById("quotaList");
+      const quotaListOff = document.getElementById("quotaListOff");
+
+      async function fetchingData(type, endpoint, element) {
+        const response = await fetch(endpoint);
+        const data = await response.json();
+
+        data.forEach((item) => {
+          const row = document.createElement("tr");
+          const dataObj = new Date(item.date);
+          const date = new Date(item.date).toLocaleDateString("id-ID", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          });
+          const isOdd = dataObj.getDate() % 2 == 0;
+          const dataText = `${date} ${isOdd ? "(Ganjil)" : ""}`;
+          const male = type == "online" ? 50 : 20;
+          const female = type == "online" ? 70 : 20;
+
+          row.innerHTML = `
+                        <td>${dataText}</td>
+                        <td>${male - item.male}</td>
+                        <td>${female - item.female}</td>
+                    `;
+          element.appendChild(row);
+        });
+      }
       document.addEventListener("DOMContentLoaded", async () => {
         try {
-          const response = await fetch("/quota-data");
-          const data = await response.json();
-          const quotaList = document.getElementById("quotaList");
-
-          data.forEach((item) => {
-            const row = document.createElement("tr");
-            const date = new Date(item.date).toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            });
-
-            row.innerHTML = `
-                        <td>${date}</td>
-                        <td>${50 - item.male}</td>
-                        <td>${70 - item.female}</td>
-                    `;
-            quotaList.appendChild(row);
-          });
+          fetchingData("online", "/quota-data", quotaList);
+          fetchingData("offline", "quota-data-offline", quotaListOff);
         } catch (error) {
           console.error("Error fetching quota data:", error);
         }

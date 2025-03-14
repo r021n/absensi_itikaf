@@ -5,7 +5,6 @@ const path = require("path");
 const http = require("http");
 const socketIo = require("socket.io");
 const session = require("express-session");
-const bcrypt = require("bcryptjs");
 const ExcelJS = require("exceljs");
 const nodemailer = require("nodemailer");
 const QRCode = require("qrcode");
@@ -42,7 +41,7 @@ app.use(
 
 // Admin credentials
 const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "passKotak123";
+const ADMIN_PASSWORD = "adminMSA123";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
@@ -162,7 +161,7 @@ process.on("SIGINT", () => {
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "rozinabdul@student.uns.ac.id", // Replace with your email
+    user: "badarmsaofficial@gmail.com", // Replace with your email
     pass: process.env.EMAIL_PASS, // Use EMAIL_PASS from .env
   },
 });
@@ -196,6 +195,43 @@ app.get("/quota-data", async (req, res) => {
           "SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female " +
           "FROM reservations WHERE reservation_date = ? AND pendaftaran = ?",
         [date, "online"],
+        (err, row) => {
+          if (err) reject(err);
+          resolve({
+            date,
+            total: row.total || 0,
+            male: row.male || 0,
+            female: row.female || 0,
+          });
+        }
+      );
+    });
+    quotaData.push(data);
+  }
+
+  res.json(quotaData);
+});
+
+app.get("/quota-data-offline", async (req, res) => {
+  const today = new Date("2025-03-20");
+  const endDate = new Date("2025-03-29");
+  const dates = [];
+
+  for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const currentDate = d.toISOString().split("T")[0];
+    dates.push(currentDate);
+  }
+
+  const quotaData = [];
+
+  for (const date of dates) {
+    const data = await new Promise((resolve, reject) => {
+      db.get(
+        "SELECT COUNT(*) as total, " +
+          "SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) as male, " +
+          "SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female " +
+          "FROM reservations WHERE reservation_date = ? AND pendaftaran = ?",
+        [date, "offline"],
         (err, row) => {
           if (err) reject(err);
           resolve({
@@ -383,8 +419,8 @@ app.get("/batal-daftar", (req, res) => {
 app.get("/search-registrants", (req, res) => {
   const searchName = req.query.name;
   db.all(
-    "SELECT * FROM reservations WHERE name LIKE ?",
-    [`%${searchName}%`],
+    "SELECT * FROM reservations WHERE name LIKE ? AND pendaftaran = ?",
+    [`%${searchName}%`, "online"],
     (err, rows) => {
       if (err) {
         console.error(err);
@@ -410,7 +446,7 @@ app.post("/initiate-cancellation/:id", (req, res) => {
 
     const cancelUrl = `${req.protocol}://${req.get("host")}/cancel/${id}`;
     const mailOptions = {
-      from: "rozinabdul@student.uns.ac.id",
+      from: "<no-reply>badarmsaofficial@gmail.com",
       to: row.email,
       subject: "Konfirmasi Pembatalan Pendaftaran Itikaf",
       html: `
@@ -588,19 +624,11 @@ app.post("/register", (req, res) => {
 
         // send email with qr codes
         const mailOptions = {
-          from: "rozinabdul@student.uns.ac.id",
+          from: "<no-reply>badarmsaofficial@gmail.com",
           to: email,
           subject: "QR Code pendaftaran Itikaf",
           html: `            <h2>QR Code Pendaftaran Itikaf</h2>
             <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
-            ${qrAttachments
-              .map(
-                (att) => `
-              <p>QR Code untuk tanggal ${att.filename.split("_")[0]}:</p>
-              <img src="cid:${att.cid}" alt="QR Code">
-            `
-              )
-              .join("")}
             <p>Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
           `,
           attachments: qrAttachments,
