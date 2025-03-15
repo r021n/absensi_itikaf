@@ -169,6 +169,40 @@
             transform: none;
         }
 
+        /* Donation section styles */
+        .donation-section {
+            margin-top: 30px;
+            text-align: center;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: var(--border-radius);
+            border: 1px solid #e0e0e0;
+        }
+
+        .donation-section h2 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 15px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .qr-code {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
         /* Add these styles to the existing CSS */
         .date-grid {
                 display: grid;
@@ -207,6 +241,24 @@
                 color: var(--primary-color);
                 font-size: 0.8rem;
                 margin-left: 5px;
+            }
+
+            .download-btn {
+                margin-top: 15px;
+                padding: 8px 16px;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: var(--border-radius);
+                cursor: pointer;
+                font-size: 0.9rem;
+                transition: var(--transition);
+                width: auto;
+            }
+
+            .download-btn:hover {
+                background-color: var(--primary-hover);
+                transform: translateY(-1px);
             }
 
         @media (max-width: 768px) {
@@ -284,6 +336,14 @@
                 <label>Tanggal Reservasi:</label>
                 <div class="date-grid" id="date-grid">
                     <!-- Checkboxes will be populated here -->
+                </div>
+            </div>
+
+            <div class="donation-section">
+                <h2>QRIS untuk infaq/donasi</h2>
+                <div class="qr-container">
+                    <img src="/static/images/qr.png" alt="QRIS Donation QR Code" class="qr-code">
+                    <button onclick="downloadQR()" class="download-btn">Download QR</button>
                 </div>
             </div>
 
@@ -402,6 +462,16 @@
             label.appendChild(checkbox);
             label.appendChild(dateLabel);
             dateGrid.appendChild(label);
+        }
+
+        function downloadQR() {
+            const qrImage = document.querySelector('.qr-code');
+            const link = document.createElement('a');
+            link.href = qrImage.src;
+            link.download = 'qris-donation.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </div>
