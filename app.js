@@ -555,9 +555,37 @@ app.post("/register", (req, res) => {
           from: "badarmsaofficial@gmail.com",
           to: email,
           subject: "QR Code pendaftaran Itikaf",
-          html: `<h2>QR Code Pendaftaran Itikaf</h2>
-            <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
-            <p>Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
+          html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+              .email-container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+              .header { background-color: #4CAF50; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+              .content { background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+              .qr-info { margin: 20px 0; padding: 15px; background-color: #e8f5e9; border-radius: 5px; }
+              .footer { margin-top: 20px; font-size: 14px; color: #666; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <div class="email-container">
+              <div class="header">
+                <h2 style="margin: 0;">QR Code Pendaftaran Itikaf</h2>
+              </div>
+              <div class="content">
+                <p>Assalamu'alaikum Wr. Wb.</p>
+                <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
+                <div class="qr-info">
+                  <p style="margin: 0; text-align: center;">Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
+                </div>
+                <div class="footer">
+                  <p>Email ini dikirim secara otomatis, mohon untuk tidak membalas email ini.</p>
+                </div>
+              </div>
+            </div>
+          </body>
+          </html>
           `,
           attachments: qrAttachments,
         };
@@ -673,14 +701,42 @@ app.post("/initiate-cancellation", (req, res) => {
       const mailOptions = {
         from: "badarmsaofficial@gmail.com",
         to: row.email,
-        subject: `Konfirmasi Pembatalan Pendaftaran Itikaf  - ${formattedDate}`,
+        subject: `Konfirmasi Pembatalan Pendaftaran Itikaf untuk ${formattedDate}`,
         html: `
-          <h2>Konfirmasi Pembatalan Pendaftaran Itikaf - ${formattedDate}</h2>
-          <p>Anda telah meminta untuk membatalkan pendaftaran itikaf.</p>
-          <p>Untuk mengkonfirmasi pembatalan, silakan klik link di bawah ini:</p>
-          <p><a href="${cancelUrl}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 4px;">Konfirmasi Pembatalan</a></p>
-          <p>Jika Anda tidak meminta pembatalan ini, Anda dapat mengabaikan email ini.</p>
-        `,
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+            .email-container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+            .header { background-color: #4CAF50; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+            .btn { display: inline-block; padding: 15px 30px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; transition: background-color 0.3s ease; }
+            .btn:hover { background-color: #d32f2f; }
+            .footer { margin-top: 20px; font-size: 14px; color: #666; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="email-container">
+            <div class="header">
+              <h2 style="margin: 0;">Konfirmasi Pembatalan Pendaftaran Itikaf</h2>
+              <p style="margin: 10px 0 0 0;">${formattedDate}</p>
+            </div>
+            <div class="content">
+              <p>Assalamu'alaikum Wr. Wb.</p>
+              <p>Anda telah meminta untuk membatalkan pendaftaran itikaf. Untuk melanjutkan proses pembatalan, silakan klik tombol di bawah ini:</p>
+              <div style="text-align: center;">
+                <a href="${cancelUrl}" class="btn">Konfirmasi Pembatalan</a>
+              </div>
+              <p style="color: #666; font-style: italic;">Jika Anda tidak meminta pembatalan ini, Anda dapat mengabaikan email ini.</p>
+              <div class="footer">
+                <p>Email ini dikirim secara otomatis, mohon untuk tidak membalas email ini.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
       };
 
       return new Promise((resolve, reject) => {
