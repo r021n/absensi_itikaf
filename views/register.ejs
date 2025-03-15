@@ -339,19 +339,19 @@
                 </div>
             </div>
 
-            <div class="donation-section">
-                <h2>QRIS untuk infaq/donasi</h2>
-                <div class="qr-container">
-                    <img src="/static/images/qr.png" alt="QRIS Donation QR Code" class="qr-code">
-                    <button onclick="downloadQR()" class="download-btn">Download QR</button>
-                </div>
-            </div>
-
             <button type="submit">
                 Submit
                 <div class="loading"></div>
             </button>
         </form>
+
+        <div class="donation-section">
+            <h2>QRIS untuk infaq/donasi</h2>
+            <div class="qr-container">
+                <img src="/static/images/qr.png" alt="QRIS Donation QR Code" class="qr-code">
+                <button onclick="downloadQR()" class="download-btn">Download QR</button>
+            </div>
+        </div>
 
         <p id="error-message" class="error"></p>
         <div id="success-message" class="success">Pendaftaran berhasil! <br> jika ingin melakukan pembatalan, lakukan di web ini juga. <br> Anda akan dialihkan ke halaman utama...</div>
