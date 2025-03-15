@@ -355,7 +355,9 @@
         const searchTerm = document.getElementById("searchInput").value;
         if (!searchTerm) return;
 
-        fetch(`/search-registrants?name=${encodeURIComponent(searchTerm)}`)
+        fetch(
+          `/itikaf/search-registrants?name=${encodeURIComponent(searchTerm)}`
+        )
           .then((response) => response.json())
           .then((data) => {
             const resultsContainer = document.getElementById("searchResults");
@@ -433,7 +435,7 @@
         button.classList.add("loading-state");
         button.disabled = true;
 
-        fetch(`/initiate-cancellation`, {
+        fetch(`/itikaf/initiate-cancellation`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

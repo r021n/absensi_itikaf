@@ -128,7 +128,7 @@
   </head>
   <body>
     <div class="container">
-      <a href="/" class="back-btn">Kembali ke Halaman Utama</a>
+      <a href="/itikaf" class="back-btn">Kembali ke Halaman Utama</a>
       <h1>Sisa Kuota Pendaftaran Itikaf (Online)</h1>
 
       <table class="quota-table">
@@ -190,8 +190,8 @@
       }
       document.addEventListener("DOMContentLoaded", async () => {
         try {
-          fetchingData("online", "/quota-data", quotaList);
-          fetchingData("offline", "quota-data-offline", quotaListOff);
+          fetchingData("online", "/itikaf/quota-data", quotaList);
+          fetchingData("offline", "/itikaf/quota-data-offline", quotaListOff);
         } catch (error) {
           console.error("Error fetching quota data:", error);
         }

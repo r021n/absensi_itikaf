@@ -387,7 +387,7 @@
                 const formDataObj = Object.fromEntries(formData);
                 formDataObj.reservation_date = selectedDates;
 
-                const response = await fetch('/register', {
+                const response = await fetch('/itikaf/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -398,7 +398,7 @@
                 if (response.ok) {
                     successMessage.style.display = 'block';
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = '/itikaf';
                     }, 7000);
                 } else {
                     const data = await response.json();
