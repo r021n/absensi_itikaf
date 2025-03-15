@@ -415,8 +415,8 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const { name, email, gender, city, number, reservation_date } = req.body;
   const pendaftaran = "online";
-  const maleLimit = 50;
-  const femaleLimit = 70;
+  const maleLimit = 75;
+  const femaleLimit = 100;
   const qrAttachments = [];
 
   // helper function
@@ -756,27 +756,46 @@ app.post("/admin/add_data", isAuthenticated, (req, res) => {
   const email = "main@mail.com";
   const pendaftaran = "offline";
   const kehadiran = true;
+  const limit = 25;
 
-  db.run(
-    "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [
-      id,
-      name,
-      email,
-      city,
-      number,
-      gender,
-      reservation_date,
-      kehadiran,
-      pendaftaran,
-    ],
-    (err) => {
+  db.get(
+    "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ? AND pendaftaran = ?",
+    [reservation_date, gender, pendaftaran],
+    (err, row) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ error: "Database error" });
       }
-      io.emit("statsUpdate");
-      res.json({ success: true });
+
+      if (row.count >= limit) {
+        return res.status(400).json({
+          error: `Maaf, kuota untuk ${gender} pada tanggal ${reservation_date} sudah penuh`,
+        });
+      }
+
+      // If quota is available, proceed with insertion
+      db.run(
+        "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          id,
+          name,
+          email,
+          city,
+          number,
+          gender,
+          reservation_date,
+          kehadiran,
+          pendaftaran,
+        ],
+        (err) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Database error" });
+          }
+          io.emit("statsUpdate");
+          res.json({ success: true });
+        }
+      );
     }
   );
 });
