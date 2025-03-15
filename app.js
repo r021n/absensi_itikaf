@@ -412,6 +412,199 @@ app.get("/register", (req, res) => {
   res.render("register");
 });
 
+app.post("/register", (req, res) => {
+  const { name, email, gender, city, number, reservation_date } = req.body;
+  const pendaftaran = "online";
+  const maleLimit = 50;
+  const femaleLimit = 70;
+  const qrAttachments = [];
+
+  // helper function
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const months = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
+  // helper function to generate QR Code
+  const generateQRCode = async (id, date) => {
+    const fileName = `${formatDate(date)}_${name}.png`;
+    const filePath = path.join(__dirname, "temp", fileName);
+
+    // Ensure temp dirextory exists
+    if (!fs.existsSync(path.join(__dirname, "temp"))) {
+      fs.mkdirSync(path.join(__dirname, "temp"));
+    }
+
+    // generate qr code
+    await QRCode.toFile(filePath, id);
+
+    return {
+      filename: fileName,
+      path: filePath,
+      cid: id,
+    };
+  };
+
+  // Begin transaction
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+
+    let hasError = false;
+    let quotaError = false;
+    let errorDate = null;
+
+    // Check quota for all selected dates
+    const checkQuotas = reservation_date.map((date) => {
+      return new Promise((resolve, reject) => {
+        db.get(
+          "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ? AND pendaftaran = ?",
+          [date, gender, pendaftaran],
+          (err, genderRow) => {
+            if (err) {
+              hasError = true;
+              reject(err);
+            } else {
+              const currentCount = genderRow.count;
+              const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
+              if (currentCount >= limit) {
+                quotaError = true;
+                errorDate = formatDate(date);
+                reject(new Error(`Quota exceeded for date ${date}`));
+              } else {
+                resolve();
+              }
+            }
+          }
+        );
+      });
+    });
+
+    Promise.all(checkQuotas)
+      .then(() => {
+        // If all quota checks pass, insert reservations for each date
+        const insertPromises = reservation_date.map((date) => {
+          const id = uuidv4();
+          return new Promise(async (resolve, reject) => {
+            try {
+              // generate qr code first
+              if (email != "-") {
+                const qrAttachment = await generateQRCode(id, date);
+                qrAttachments.push(qrAttachment);
+              }
+
+              // then insert into database
+              db.run(
+                "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                  id,
+                  name,
+                  email,
+                  city,
+                  number,
+                  gender,
+                  date,
+                  false,
+                  pendaftaran,
+                ],
+                (err) => {
+                  if (err) {
+                    hasError = true;
+                    reject(err);
+                  } else {
+                    resolve();
+                  }
+                }
+              );
+            } catch (error) {
+              hasError = true;
+              reject(error);
+            }
+          });
+        });
+
+        return Promise.all(insertPromises);
+      })
+      .then(async () => {
+        if (hasError) {
+          // Delete all QR codes if there's an error
+          qrAttachments.forEach((attachment) => {
+            if (fs.existsSync(attachment.path)) {
+              fs.unlinkSync(attachment.path);
+            }
+          });
+          db.run("ROLLBACK");
+          return res.status(500).json({ error: "Database error" });
+        }
+
+        // send email with qr codes
+        const mailOptions = {
+          from: "badarmsaofficial@gmail.com",
+          to: email,
+          subject: "QR Code pendaftaran Itikaf",
+          html: `<h2>QR Code Pendaftaran Itikaf</h2>
+            <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
+            <p>Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
+          `,
+          attachments: qrAttachments,
+        };
+
+        try {
+          if (email != "-") {
+            await transporter.sendMail(mailOptions);
+
+            // Delete all QR codes after email is sent
+            qrAttachments.forEach((attachment) => {
+              if (fs.existsSync(attachment.path)) {
+                fs.unlinkSync(attachment.path);
+              }
+            });
+          }
+
+          db.run("COMMIT");
+          io.emit("statsUpdate");
+          res.redirect("/");
+        } catch (error) {
+          console.error("Error sending email: ", error);
+          db.run("ROLLBACK");
+          res.status(500).json({
+            error: "Gagal mengirim email (coba periksa kembali email anda)",
+          });
+        }
+      })
+      .catch((error) => {
+        // Clean up generated QR code
+        qrAttachments.forEach((attachment) => {
+          if (fs.existsSync(attachment.path)) {
+            fs.unlinkSync(attachment.path);
+          }
+        });
+
+        db.run("ROLLBACK");
+        if (quotaError) {
+          return res.status(400).json({
+            error: `Maaf, kuota untuk ${gender} pada tanggal ${errorDate} sudah penuh`,
+          });
+        }
+        console.error(error);
+        return res.status(500).json({ error: "Database error" });
+      });
+  });
+});
+
 app.get("/batal-daftar", (req, res) => {
   res.render("batal_daftar");
 });
@@ -550,197 +743,6 @@ app.post("/cancel", (req, res) => {
 
     io.emit("statsUpdate");
     res.render("cancellation_success");
-  });
-});
-
-app.post("/register", (req, res) => {
-  const { name, email, gender, city, number, reservation_date } = req.body;
-  const pendaftaran = "online";
-  const maleLimit = 50;
-  const femaleLimit = 70;
-  const qrAttachments = [];
-
-  // helper function
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const months = [
-      "Januari",
-      "Februari",
-      "Maret",
-      "April",
-      "Mei",
-      "Juni",
-      "Juli",
-      "Agustus",
-      "September",
-      "Oktober",
-      "November",
-      "Desember",
-    ];
-    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
-  };
-
-  // helper function to generate QR Code
-  const generateQRCode = async (id, date) => {
-    const fileName = `${formatDate(date)}_${name}.png`;
-    const filePath = path.join(__dirname, "temp", fileName);
-
-    // Ensure temp dirextory exists
-    if (!fs.existsSync(path.join(__dirname, "temp"))) {
-      fs.mkdirSync(path.join(__dirname, "temp"));
-    }
-
-    // generate qr code
-    await QRCode.toFile(filePath, id);
-
-    return {
-      filename: fileName,
-      path: filePath,
-      cid: id,
-    };
-  };
-
-  // Begin transaction
-  db.serialize(() => {
-    db.run("BEGIN TRANSACTION");
-
-    let hasError = false;
-    let quotaError = false;
-    let errorDate = null;
-
-    // Check quota for all selected dates
-    const checkQuotas = reservation_date.map((date) => {
-      return new Promise((resolve, reject) => {
-        db.get(
-          "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ? AND pendaftaran = ?",
-          [date, gender, pendaftaran],
-          (err, genderRow) => {
-            if (err) {
-              hasError = true;
-              reject(err);
-            } else {
-              const currentCount = genderRow.count;
-              const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
-              if (currentCount >= limit) {
-                quotaError = true;
-                errorDate = formatDate(date);
-                reject(new Error(`Quota exceeded for date ${date}`));
-              } else {
-                resolve();
-              }
-            }
-          }
-        );
-      });
-    });
-
-    Promise.all(checkQuotas)
-      .then(() => {
-        // If all quota checks pass, insert reservations for each date
-        const insertPromises = reservation_date.map((date) => {
-          const id = uuidv4();
-          return new Promise(async (resolve, reject) => {
-            try {
-              // generate qr code first
-              const qrAttachment = await generateQRCode(id, date);
-              qrAttachments.push(qrAttachment);
-
-              // then insert into database
-              db.run(
-                "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [
-                  id,
-                  name,
-                  email,
-                  city,
-                  number,
-                  gender,
-                  date,
-                  false,
-                  pendaftaran,
-                ],
-                (err) => {
-                  if (err) {
-                    hasError = true;
-                    reject(err);
-                  } else {
-                    resolve();
-                  }
-                }
-              );
-            } catch (error) {
-              hasError = true;
-              reject(error);
-            }
-          });
-        });
-
-        return Promise.all(insertPromises);
-      })
-      .then(async () => {
-        if (hasError) {
-          // Delete all QR codes if there's an error
-          qrAttachments.forEach((attachment) => {
-            if (fs.existsSync(attachment.path)) {
-              fs.unlinkSync(attachment.path);
-            }
-          });
-          db.run("ROLLBACK");
-          return res.status(500).json({ error: "Database error" });
-        }
-
-        // send email with qr codes
-        const mailOptions = {
-          from: "badarmsaofficial@gmail.com",
-          to: email,
-          subject: "QR Code pendaftaran Itikaf",
-          html: `<h2>QR Code Pendaftaran Itikaf</h2>
-            <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
-            <p>Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
-          `,
-          attachments: qrAttachments,
-        };
-
-        try {
-          if (email != "-") {
-            await transporter.sendMail(mailOptions);
-
-            // Delete all QR codes after email is sent
-            qrAttachments.forEach((attachment) => {
-              if (fs.existsSync(attachment.path)) {
-                fs.unlinkSync(attachment.path);
-              }
-            });
-          }
-
-          db.run("COMMIT");
-          io.emit("statsUpdate");
-          res.redirect("/");
-        } catch (error) {
-          console.error("Error sending email: ", error);
-          db.run("ROLLBACK");
-          res.status(500).json({
-            error: "Gagal mengirim email (coba periksa kembali email anda)",
-          });
-        }
-      })
-      .catch((error) => {
-        // Clean up generated QR code
-        qrAttachments.forEach((attachment) => {
-          if (fs.existsSync(attachment.path)) {
-            fs.unlinkSync(attachment.path);
-          }
-        });
-
-        db.run("ROLLBACK");
-        if (quotaError) {
-          return res.status(400).json({
-            error: `Maaf, kuota untuk ${gender} pada tanggal ${errorDate} sudah penuh`,
-          });
-        }
-        console.error(error);
-        return res.status(500).json({ error: "Database error" });
-      });
   });
 });
 
