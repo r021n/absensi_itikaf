@@ -170,19 +170,24 @@ const transporter = nodemailer.createTransport({
 });
 
 // Routes
+
 app.get("/", (req, res) => {
+  res.render("index");
+});
+
+app.get("/itikaf", (req, res) => {
   res.render("halaman_awal");
 });
 
-app.get("/ketentuan-itikaf", (req, res) => {
+app.get("/itikaf/ketentuan-itikaf", (req, res) => {
   res.render("itikaf_rule");
 });
 
-app.get("/sisa-kuota", (req, res) => {
+app.get("/itikaf/sisa-kuota", (req, res) => {
   res.render("sisa_kuota");
 });
 
-app.get("/quota-data", async (req, res) => {
+app.get("/itikaf/quota-data", async (req, res) => {
   const today = new Date("2025-03-20");
   const endDate = new Date("2025-03-29");
   const dates = [];
@@ -219,7 +224,7 @@ app.get("/quota-data", async (req, res) => {
   res.json(quotaData);
 });
 
-app.get("/quota-data-offline", async (req, res) => {
+app.get("/itikaf/quota-data-offline", async (req, res) => {
   const today = new Date("2025-03-20");
   const endDate = new Date("2025-03-29");
   const dates = [];
@@ -415,11 +420,11 @@ app.get("/admin/download", isAuthenticated, (req, res) => {
   });
 });
 
-app.get("/register", (req, res) => {
+app.get("/itikaf/register", (req, res) => {
   res.render("register");
 });
 
-app.post("/register", (req, res) => {
+app.post("/itikaf/register", (req, res) => {
   const { name, email, gender, city, number, reservation_date } = req.body;
   const pendaftaran = "online";
   const maleLimit = 75;
@@ -611,7 +616,7 @@ app.post("/register", (req, res) => {
 
           db.run("COMMIT");
           io.emit("statsUpdate");
-          res.redirect("/");
+          res.redirect("/itikaf");
         } catch (error) {
           console.error("Error sending email: ", error);
           db.run("ROLLBACK");
@@ -640,11 +645,11 @@ app.post("/register", (req, res) => {
   });
 });
 
-app.get("/batal-daftar", (req, res) => {
+app.get("/itikaf/batal-daftar", (req, res) => {
   res.render("batal_daftar");
 });
 
-app.get("/search-registrants", (req, res) => {
+app.get("/itikaf/search-registrants", (req, res) => {
   const searchName = req.query.name;
   db.all(
     "SELECT * FROM reservations WHERE name LIKE ? AND pendaftaran = ?",
@@ -659,7 +664,7 @@ app.get("/search-registrants", (req, res) => {
   );
 });
 
-app.post("/initiate-cancellation", (req, res) => {
+app.post("/itikaf/initiate-cancellation", (req, res) => {
   const { ids } = req.body;
 
   if (!Array.isArray(ids) || ids.length === 0) {
