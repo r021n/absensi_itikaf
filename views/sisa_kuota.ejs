@@ -143,7 +143,7 @@
         <tbody id="quotaList"></tbody>
       </table>
 
-      <h1>Sisa Kuota Pendaftaran Itikaf Ditempat(Offline)</h1>
+      <h1>Sisa Kuota Pendaftaran Itikaf Ditempat (Offline)</h1>
 
       <table class="quota-table">
         <thead>
@@ -177,8 +177,8 @@
           });
           const isOdd = dataObj.getDate() % 2 == 0;
           const dataText = `${date} ${isOdd ? "(Ganjil)" : ""}`;
-          const male = type == "online" ? 50 : 20;
-          const female = type == "online" ? 70 : 20;
+          const male = type == "online" ? 75 : 25;
+          const female = type == "online" ? 100 : 25;
 
           row.innerHTML = `
                         <td>${dataText}</td>
