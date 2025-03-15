@@ -431,42 +431,86 @@ app.get("/search-registrants", (req, res) => {
   );
 });
 
-app.post("/initiate-cancellation/:id", (req, res) => {
-  const { id } = req.params;
+app.post("/initiate-cancellation", (req, res) => {
+  const { ids } = req.body;
 
-  db.get("SELECT * FROM reservations WHERE id = ?", [id], (err, row) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Invalid request format" });
+  }
+
+  const placeholders = ids.map(() => "?").join(",");
+  const query = `SELECT * FROM reservations WHERE id IN (${placeholders})`;
+
+  db.all(query, ids, (err, rows) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: "Database error" });
     }
 
-    if (!row) {
+    if (rows.length === 0) {
       return res.status(404).json({ error: "Pendaftaran tidak ditemukan" });
     }
 
-    const cancelUrl = `${req.protocol}://${req.get("host")}/cancel/${id}`;
-    const mailOptions = {
-      from: "badarmsaofficial@gmail.com",
-      to: row.email,
-      subject: "Konfirmasi Pembatalan Pendaftaran Itikaf",
-      html: `
-        <h2>Konfirmasi Pembatalan Pendaftaran Itikaf</h2>
-        <p>Anda telah meminta untuk membatalkan pendaftaran itikaf.</p>
-        <p>Untuk mengkonfirmasi pembatalan, silakan klik link di bawah ini:</p>
-        <p><a href="${cancelUrl}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 4px;">Konfirmasi Pembatalan</a></p>
-        <p>Jika Anda tidak meminta pembatalan ini, Anda dapat mengabaikan email ini.</p>
-      `,
+    // Helper function to format date
+    const formatDate = (dateString) => {
+      const date = new Date(dateString);
+      const months = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+      ];
+      return `${date.getDate()} ${
+        months[date.getMonth()]
+      } ${date.getFullYear()}`;
     };
 
-    transporter.sendMail(mailOptions, (error) => {
-      if (error) {
-        console.error(error);
-        return res
-          .status(500)
-          .json({ error: "Gagal mengirim email konfirmasi" });
-      }
-      res.json({ success: true });
+    const emailPromises = rows.map((row) => {
+      const cancelUrl = `${req.protocol}://${req.get("host")}/cancel/${row.id}`;
+      const formattedDate = formatDate(row.reservation_date);
+
+      const mailOptions = {
+        from: "badarmsaofficial@gmail.com",
+        to: row.email,
+        subject: `Konfirmasi Pembatalan Pendaftaran Itikaf  - ${formattedDate}`,
+        html: `
+          <h2>Konfirmasi Pembatalan Pendaftaran Itikaf - ${formattedDate}</h2>
+          <p>Anda telah meminta untuk membatalkan pendaftaran itikaf.</p>
+          <p>Untuk mengkonfirmasi pembatalan, silakan klik link di bawah ini:</p>
+          <p><a href="${cancelUrl}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 4px;">Konfirmasi Pembatalan</a></p>
+          <p>Jika Anda tidak meminta pembatalan ini, Anda dapat mengabaikan email ini.</p>
+        `,
+      };
+
+      return new Promise((resolve, reject) => {
+        transporter.sendMail(mailOptions, (error) => {
+          if (error) {
+            console.error(`Failed to send email to ${row.email}:`, error);
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
     });
+
+    Promise.allSettled(emailPromises)
+      .then(() => {
+        res.json({ success: true });
+      })
+      .catch(() => {
+        res
+          .status(500)
+          .json({ error: "Gagal mengirim beberapa email konfirmasi" });
+      });
   });
 });
 
@@ -479,6 +523,29 @@ app.get("/cancel/:id", (req, res) => {
       return res
         .status(500)
         .send("Terjadi kesalahan saat membatalkan pendaftaran");
+    }
+
+    io.emit("statsUpdate");
+    res.render("cancellation_success");
+  });
+});
+
+app.post("/cancel", (req, res) => {
+  const { ids } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Invalid request format" });
+  }
+
+  const placeholders = ids.map(() => "?").join(",");
+  const query = `DELETE FROM reservations WHERE id IN (${placeholders})`;
+
+  db.run(query, ids, (err) => {
+    if (err) {
+      console.error(err);
+      return res
+        .status(500)
+        .json({ error: "Terjadi kesalahan saat membatalkan pendaftaran" });
     }
 
     io.emit("statsUpdate");
@@ -627,7 +694,7 @@ app.post("/register", (req, res) => {
           from: "badarmsaofficial@gmail.com",
           to: email,
           subject: "QR Code pendaftaran Itikaf",
-          html: `            <h2>QR Code Pendaftaran Itikaf</h2>
+          html: `<h2>QR Code Pendaftaran Itikaf</h2>
             <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
             <p>Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
           `,
@@ -635,21 +702,26 @@ app.post("/register", (req, res) => {
         };
 
         try {
-          await transporter.sendMail(mailOptions);
+          if (email != "-") {
+            await transporter.sendMail(mailOptions);
 
-          // Delete all QR codes after email is sent
-          qrAttachments.forEach((attachment) => {
-            if (fs.existsSync(attachment.path)) {
-              fs.unlinkSync(attachment.path);
-            }
-          });
+            // Delete all QR codes after email is sent
+            qrAttachments.forEach((attachment) => {
+              if (fs.existsSync(attachment.path)) {
+                fs.unlinkSync(attachment.path);
+              }
+            });
+          }
+
           db.run("COMMIT");
           io.emit("statsUpdate");
           res.redirect("/");
         } catch (error) {
           console.error("Error sending email: ", error);
           db.run("ROLLBACK");
-          res.status(500).json({ error: "Gagal mengirim email" });
+          res.status(500).json({
+            error: "Gagal mengirim email (coba periksa kembali email anda)",
+          });
         }
       })
       .catch((error) => {

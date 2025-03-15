@@ -258,7 +258,7 @@
 
             <div class="form-group">
                 <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
+                <input type="text" id="email" name="email" required>
             </div>
 
             <div class="form-group">
@@ -294,7 +294,7 @@
         </form>
 
         <p id="error-message" class="error"></p>
-        <div id="success-message" class="success">Pendaftaran berhasil! Anda akan dialihkan ke halaman utama...</div>
+        <div id="success-message" class="success">Pendaftaran berhasil! jika ingin melakukan pembatalan, lakukan di situs yang sama. <br> Anda akan dialihkan ke halaman utama...</div>
     </div>
 
     <script>        
@@ -339,7 +339,7 @@
                     successMessage.style.display = 'block';
                     setTimeout(() => {
                         window.location.href = '/';
-                    }, 2000);
+                    }, 5000);
                 } else {
                     const data = await response.json();
                     errorMessage.textContent = data.error;

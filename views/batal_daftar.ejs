@@ -59,8 +59,27 @@
         display: flex;
         gap: 10px;
         justify-content: center;
+        flex-wrap: wrap;
       }
 
+      .batch-actions {
+        width: 100%;
+        display: none;
+        justify-content: center;
+        margin-top: 10px;
+      }
+
+      .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .checkbox-wrapper input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
       .search-input {
         width: 100%;
         max-width: 500px;
@@ -122,6 +141,7 @@
         color: #2c3e50;
         font-size: 1.1rem;
         margin-bottom: 5px;
+        text-align: justify;
       }
 
       .result-info small {
@@ -280,6 +300,17 @@
           placeholder="Masukkan nama untuk mencari..."
         />
         <button onclick="searchRegistrants()" class="search-btn">Cari</button>
+        <div class="batch-actions" id="batchActions">
+          <button
+            onclick="initiateBatchCancel()"
+            class="cancel-btn"
+            id="batchCancelBtn"
+            disabled
+          >
+            Batalkan Pendaftaran
+            <div class="loading"></div>
+          </button>
+        </div>
       </div>
 
       <div id="notification" class="notification"></div>
@@ -296,7 +327,7 @@
           "Rabu",
           "Kamis",
           "Jumat",
-          "Sabtu"
+          "Sabtu",
         ];
         const months = [
           "Januari",
@@ -334,18 +365,17 @@
               const resultItem = document.createElement("div");
               resultItem.className = "result-item";
               resultItem.innerHTML = `
-                <div class="result-info">
-                  <strong>${registrant.name}</strong>
-                  <small>Tanggal Itikaf: ${formatDate(
-                    registrant.reservation_date
-                  )}</small>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" onchange="updateBatchActions()" data-id="${
+                    registrant.id
+                  }" />
+                  <div class="result-info">
+                    <strong>${registrant.name}</strong>
+                    <small>Tanggal Itikaf: ${formatDate(
+                      registrant.reservation_date
+                    )}</small>
+                  </div>
                 </div>
-                <button onclick="initiateCancel('${
-                  registrant.id
-                }')" class="cancel-btn">
-                  Batalkan Daftar
-                  <div class="loading"></div>
-                </button>
               `;
               resultsContainer.appendChild(resultItem);
             });
@@ -358,41 +388,6 @@
           .catch((error) => {
             console.error("Error:", error);
             showNotification("Terjadi kesalahan saat mencari data.", "error");
-          });
-      }
-
-      function initiateCancel(registrantId) {
-        const button = event.target.closest(".cancel-btn");
-        button.classList.add("loading-state");
-        button.disabled = true;
-
-        fetch(`/initiate-cancellation/${registrantId}`, {
-          method: "POST",
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            button.classList.remove("loading-state");
-            button.disabled = false;
-            if (data.success) {
-              showNotification(
-                "Email konfirmasi telah dikirim. Silakan cek email Anda untuk melanjutkan proses pembatalan.",
-                "success"
-              );
-            } else {
-              showNotification(
-                data.error || "Terjadi kesalahan saat memproses pembatalan.",
-                "error"
-              );
-            }
-          })
-          .catch((error) => {
-            console.error("Error:", error);
-            button.classList.remove("loading-state");
-            button.disabled = false;
-            showNotification(
-              "Terjadi kesalahan saat memproses pembatalan.",
-              "error"
-            );
           });
       }
 
@@ -415,6 +410,62 @@
             searchRegistrants();
           }
         });
+
+      function updateBatchActions() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        const checkedBoxes = Array.from(checkboxes).filter((cb) => cb.checked);
+        const batchActions = document.getElementById("batchActions");
+        const batchCancelBtn = document.getElementById("batchCancelBtn");
+
+        batchActions.style.display = checkboxes.length > 0 ? "flex" : "none";
+        batchCancelBtn.disabled = checkedBoxes.length === 0;
+      }
+
+      function initiateBatchCancel() {
+        const checkboxes = document.querySelectorAll(
+          'input[type="checkbox"]:checked'
+        );
+        const ids = Array.from(checkboxes).map((cb) => cb.dataset.id);
+        const button = document.getElementById("batchCancelBtn");
+
+        if (ids.length === 0) return;
+
+        button.classList.add("loading-state");
+        button.disabled = true;
+
+        fetch(`/initiate-cancellation`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ids }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            button.classList.remove("loading-state");
+            button.disabled = false;
+            if (data.success) {
+              showNotification(
+                "Email konfirmasi telah dikirim ke semua peserta terpilih. Silakan cek email untuk melanjutkan proses pembatalan.",
+                "success"
+              );
+            } else {
+              showNotification(
+                data.error || "Terjadi kesalahan saat memproses pembatalan.",
+                "error"
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            button.classList.remove("loading-state");
+            button.disabled = false;
+            showNotification(
+              "Terjadi kesalahan saat memproses pembatalan.",
+              "error"
+            );
+          });
+      }
     </script>
   </body>
 </html>
