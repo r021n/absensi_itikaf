@@ -174,6 +174,10 @@ app.get("/", (req, res) => {
   res.render("halaman_awal");
 });
 
+app.get("/ketentuan-itikaf", (req, res) => {
+  res.render("itikaf_rule");
+});
+
 app.get("/sisa-kuota", (req, res) => {
   res.render("sisa_kuota");
 });

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ketentuan Itikaf</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Poppins", sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: #f8f9fa;
+      }
+
+      .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      h2 {
+        color: #2c3e50;
+        margin: 2rem 0 1rem;
+        font-size: 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      h2:first-child {
+        margin-top: 0;
+      }
+
+      ol {
+        list-style: none;
+        counter-reset: item;
+        padding-left: 1rem;
+      }
+
+      li {
+        counter-increment: item;
+        margin-bottom: 0.75rem;
+        position: relative;
+        padding-left: 2rem;
+        transition: transform 0.2s;
+      }
+
+      li:hover {
+        transform: translateX(5px);
+      }
+
+      li::before {
+        content: counter(item);
+        background: #4caf50;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        left: 0;
+        font-size: 0.875rem;
+      }
+
+      .agreement {
+        margin: 2rem 0;
+        padding: 1rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background: #f5f5f5;
+      }
+
+      .checkbox-wrapper {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-top: 3px;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background-color: #4caf50;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: background-color 0.3s;
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .btn.active {
+        opacity: 1;
+        cursor: pointer;
+      }
+
+      .btn.active:hover {
+        background-color: #388e3c;
+      }
+
+      @media (max-width: 600px) {
+        body {
+          padding: 1rem;
+        }
+
+        .container {
+          padding: 1rem;
+        }
+
+        h2 {
+          font-size: 1.5rem;
+        }
+
+        li {
+          font-size: 0.95rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>🕌 FASILITAS</h2>
+      <ol>
+        <li>Tempat yang nyaman, bersih, dan kondusif untuk ibadah</li>
+        <li>Coffee break berupa teh/kopi untuk menyegarkan ibadah</li>
+        <li>Qiyamullail bersama imam bersuara merdu & ustadz pilihan</li>
+        <li>Santap sahur nikmat gratis (sesuai ketersediaan)</li>
+      </ol>
+
+      <h2>🕋 KEGIATAN</h2>
+      <ol>
+        <li>Ibadah Mandiri</li>
+        <li>Qiyamullail Syahdu</li>
+        <li>Sahur</li>
+        <li>Sholat Subuh Berjamaah</li>
+      </ol>
+
+      <h2>🚨 KETENTUAN</h2>
+      <ol>
+        <li>Itikaf dilaksanakan mulai pukul 21.30 WIB - 06.30 WIB (Syuruq)</li>
+        <li>Berpakaian muslim/muslimah dengan menjaga aurat</li>
+        <li>Membawa alas tidur dan tempat minum pribadi</li>
+        <li>Hanya menyantap makanan & minuman di area yang ditentukan</li>
+        <li>Melakukan daftar ulang setiap harinya pukul 21.30 WIB</li>
+        <li>Mematuhi peraturan dan instruksi panitia</li>
+      </ol>
+
+      <div class="agreement">
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="agree" />
+          <label for="agree"
+            >Saya menyetujui dan akan mematuhi semua ketentuan yang telah
+            ditetapkan untuk kegiatan itikaf ini</label
+          >
+        </div>
+      </div>
+
+      <a href="/register" class="btn" id="registerBtn">Lanjut ke Pendaftaran</a>
+    </div>
+
+    <script>
+      const checkbox = document.getElementById("agree");
+      const registerBtn = document.getElementById("registerBtn");
+
+      checkbox.addEventListener("change", function () {
+        if (this.checked) {
+          registerBtn.classList.add("active");
+          registerBtn.style.pointerEvents = "auto";
+        } else {
+          registerBtn.classList.remove("active");
+          registerBtn.style.pointerEvents = "none";
+        }
+      });
+
+      registerBtn.addEventListener("click", function (e) {
+        if (!checkbox.checked) {
+          e.preventDefault();
+          alert(
+            "Silakan setujui ketentuan terlebih dahulu sebelum melanjutkan pendaftaran."
+          );
+        }
+      });
+    </script>
+  </body>
+</html>
