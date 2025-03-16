@@ -80,9 +80,28 @@ const db = new sqlite3.Database("reservations.db", (err) => {
 io.on("connection", (socket) => {
   console.log("Client connected");
 
+  // Cache configuration
+  let statsCache = {
+    data: null,
+    lastUpdated: null,
+  };
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
   // Function to emit updated statistics
   const emitStats = async () => {
     try {
+      const currentTime = Date.now();
+
+      // Check if cache is valid
+      if (
+        statsCache.data &&
+        statsCache.lastUpdated &&
+        currentTime - statsCache.lastUpdated < CACHE_DURATION
+      ) {
+        socket.emit("stats", statsCache.data);
+        return;
+      }
+
       const [maleRows, femaleRows] = await Promise.all([
         new Promise((resolve, reject) => {
           db.all(
@@ -121,11 +140,17 @@ io.on("connection", (socket) => {
       const femaleCount = femaleSet.size;
       const totalCount = maleCount + femaleCount;
 
-      socket.emit("stats", {
+      const stats = {
         total: totalCount,
         male: maleCount,
         female: femaleCount,
-      });
+      };
+
+      // Update cache
+      statsCache.data = stats;
+      statsCache.lastUpdated = currentTime;
+
+      socket.emit("stats", stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
