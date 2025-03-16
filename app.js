@@ -194,6 +194,10 @@ app.get("/itikaf-regist-done", (req, res) => {
   res.render("after_regist_itikaf");
 });
 
+app.get("/cancel-tutorial", (req, res) => {
+  res.render("cancellation_tutorial");
+});
+
 app.get("/itikaf/ketentuan-itikaf", (req, res) => {
   res.render("itikaf_rule");
 });

@@ -157,6 +157,41 @@
         color: #777;
       }
 
+      .divider {
+        margin: 30px auto;
+        border: none;
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          #dddddd,
+          transparent
+        );
+        width: 80%;
+      }
+
+      .tutorial-link {
+        margin: 20px 0;
+      }
+
+      .tutorial-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        color: #004890;
+        text-decoration: none;
+        font-weight: 500;
+        border-radius: var(--border-radius);
+        background-color: #8ac5ff;
+        border: 1px solid #53a9ff;
+        transition: all 0.3s ease;
+      }
+
+      .tutorial-btn:hover {
+        background-color: #e9ecef;
+        transform: translateY(-2px);
+        box-shadow: var(--box-shadow);
+      }
+
       @media (max-width: 768px) {
         h1 {
           font-size: 2rem;
@@ -225,6 +260,12 @@
           >Cek/Batal Daftar</a
         >
         <a href="/itikaf/sisa-kuota" class="btn btn-info">Lihat Sisa Kuota</a>
+      </div>
+      <hr class="divider" />
+      <div class="tutorial-link">
+        <a href="/cancel-tutorial" class="tutorial-btn"
+          >Tutorial Batal Daftar Itikaf</a
+        >
       </div>
 
       <div class="footer">
