@@ -83,37 +83,48 @@ io.on("connection", (socket) => {
   // Function to emit updated statistics
   const emitStats = async () => {
     try {
-      const [totalRow, maleRow, femaleRow] = await Promise.all([
+      const [maleRows, femaleRows] = await Promise.all([
         new Promise((resolve, reject) => {
-          db.get("SELECT COUNT(*) as total FROM reservations", (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-          });
-        }),
-        new Promise((resolve, reject) => {
-          db.get(
-            "SELECT COUNT(*) as male FROM reservations WHERE gender = 'laki-laki'",
-            (err, row) => {
+          db.all(
+            "SELECT name, email, city, number, gender FROM reservations WHERE gender = 'laki-laki'",
+            (err, rows) => {
               if (err) reject(err);
-              else resolve(row);
+              else resolve(rows);
             }
           );
         }),
         new Promise((resolve, reject) => {
-          db.get(
-            "SELECT COUNT(*) as female FROM reservations WHERE gender = 'perempuan'",
-            (err, row) => {
+          db.all(
+            "SELECT name, email, city, number, gender FROM reservations WHERE gender = 'perempuan'",
+            (err, rows) => {
               if (err) reject(err);
-              else resolve(row);
+              else resolve(rows);
             }
           );
         }),
       ]);
 
+      const maleSet = new Set(
+        maleRows.map(
+          (row) =>
+            `${row.name}${row.email}${row.city}${row.number}${row.gender}`
+        )
+      );
+      const femaleSet = new Set(
+        femaleRows.map(
+          (row) =>
+            `${row.name}${row.email}${row.city}${row.number}${row.gender}`
+        )
+      );
+
+      const maleCount = maleSet.size;
+      const femaleCount = femaleSet.size;
+      const totalCount = maleCount + femaleCount;
+
       socket.emit("stats", {
-        total: totalRow.total,
-        male: maleRow.male,
-        female: femaleRow.female,
+        total: totalCount,
+        male: maleCount,
+        female: femaleCount,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
