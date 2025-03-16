@@ -94,6 +94,10 @@
         background-color: #3d8b40;
       }
 
+      .ganjil-tgl {
+        color: seagreen;
+      }
+
       @media (max-width: 768px) {
         .container {
           padding: 10px;
@@ -129,7 +133,7 @@
   <body>
     <div class="container">
       <a href="/itikaf" class="back-btn">Kembali ke Halaman Utama</a>
-      <h1>Sisa Kuota Pendaftaran Itikaf (Online)</h1>
+      <h1>Sisa Kuota Pendaftar Itikaf (Online)</h1>
 
       <table class="quota-table">
         <thead>
@@ -143,7 +147,7 @@
         <tbody id="quotaList"></tbody>
       </table>
 
-      <h1>Sisa Kuota Pendaftaran Itikaf Ditempat (Offline)</h1>
+      <h1>Sisa kuota pendaftar On The Spot (Hari H)</h1>
 
       <table class="quota-table">
         <thead>
@@ -176,7 +180,9 @@
             year: "numeric",
           });
           const isOdd = dataObj.getDate() % 2 == 0;
-          const dataText = `${date} ${isOdd ? "(Ganjil)" : ""}`;
+          const dataText = `${date} <span class="ganjil-tgl">${
+            isOdd ? "(Ganjil)" : ""
+          }</span>`;
           const male = type == "online" ? 75 : 25;
           const female = type == "online" ? 100 : 25;
 
