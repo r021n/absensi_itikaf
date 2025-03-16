@@ -261,6 +261,65 @@
                 transform: translateY(-1px);
             }
 
+            .donation-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                justify-content: center;
+                align-items: flex-start;
+                margin-top: 20px;
+            }
+            .bank-container {
+                flex: 1;
+                min-width: 280px;
+                background: white;
+                padding: 20px;
+                border-radius: var(--border-radius);
+                box-shadow: var(--box-shadow);
+            }
+            .bank-container h3 {
+                color: #2c3e50;
+                font-size: 1.2rem;
+                margin-bottom: 15px;
+                text-align: left;
+            }
+            .bank-details p {
+                margin: 8px 0;
+                color: #2c3e50;
+                font-size: 0.95rem;
+            }
+            .qr-container {
+                flex: 1;
+                min-width: 280px;
+            }
+            .account-number {
+                align-items: center;
+                gap: 10px;
+            }
+            .copy-btn {
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: var(--border-radius);
+                cursor: pointer;
+                font-size: 0.8rem;
+                transition: var(--transition);
+            }
+            .copy-btn:hover {
+                background-color: var(--primary-hover);
+            }
+            .copy-feedback {
+                display: none;
+                color: var(--success-color);
+                font-size: 0.8rem;
+                margin-top: 4px;
+                animation: fadeIn 0.3s ease;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
         @media (max-width: 768px) {
             .container {
                 padding: 30px 20px;
@@ -345,16 +404,28 @@
             </button>
         </form>
 
-        <div class="donation-section">
-            <h2>QRIS untuk infaq/donasi</h2>
-            <div class="qr-container">
-                <img src="/static/images/qr.png" alt="QRIS Donation QR Code" class="qr-code">
-                <button onclick="downloadQR()" class="download-btn">Download QR</button>
-            </div>
-        </div>
-
         <p id="error-message" class="error"></p>
         <div id="success-message" class="success">Pendaftaran berhasil! <br> jika ingin melakukan pembatalan, lakukan di web ini juga. <br> Anda akan dialihkan ke halaman utama...</div>
+
+        <div class="donation-section">
+            <h2>QRIS untuk infaq/donasi</h2>
+            <div class="donation-container">
+                <div class="qr-container">
+                    <img src="/static/images/qr.png" alt="QRIS Donation QR Code" class="qr-code">
+                    <button onclick="downloadQR()" class="download-btn">Download QR</button>
+                </div>
+                <div class="bank-container">
+                    <h3 style="text-align: center;">Rekening Infaq & Sedekah</h3>
+                    <div class="bank-details">
+                        <p><strong>Bank:</strong> Bank Syariah Indonesia</p>
+                        <p class="account-number"><strong>No. Rekening:</strong> 7966-6796-67 </p>
+                        <p><strong>Atas Nama:</strong> Yayasan Masjid Siti Aisyah</p>
+                        <button onclick="copyAccountNumber()" class="copy-btn">Salin No. Rekening</button>
+                        <div id="copy-feedback" class="copy-feedback">Nomor rekening berhasil disalin!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>        
@@ -472,6 +543,17 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        function copyAccountNumber() {
+            const accountNumber = '79666796-67'.replace(/-/g, '');
+            navigator.clipboard.writeText(accountNumber).then(() => {
+                const feedback = document.getElementById('copy-feedback');
+                feedback.style.display = 'block';
+                setTimeout(() => {
+                    feedback.style.display = 'none';
+                }, 2000);
+            });
         }
     </script>
 </div>
