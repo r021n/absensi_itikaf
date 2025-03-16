@@ -405,7 +405,7 @@
         </form>
 
         <p id="error-message" class="error"></p>
-        <div id="success-message" class="success">Pendaftaran berhasil! <br> jika ingin melakukan pembatalan, lakukan di web ini juga. <br> Anda akan dialihkan ke halaman utama...</div>
+        <div id="success-message" class="success">Pendaftaran berhasil! <br> Anda akan diarahkan ke halaman selanjutnya...</div>
 
         <div class="donation-section">
             <h2>QRIS untuk infaq/donasi</h2>
@@ -469,8 +469,8 @@
                 if (response.ok) {
                     successMessage.style.display = 'block';
                     setTimeout(() => {
-                        window.location.href = '/itikaf';
-                    }, 7000);
+                        window.location.href = '/itikaf-regist-done';
+                    }, 3000);
                 } else {
                     const data = await response.json();
                     errorMessage.textContent = data.error;

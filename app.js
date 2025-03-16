@@ -190,6 +190,10 @@ app.get("/itikaf", (req, res) => {
   res.render("halaman_awal");
 });
 
+app.get("/itikaf-regist-done", (req, res) => {
+  res.render("after_regist_itikaf");
+});
+
 app.get("/itikaf/ketentuan-itikaf", (req, res) => {
   res.render("itikaf_rule");
 });
