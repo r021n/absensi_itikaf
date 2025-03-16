@@ -77,89 +77,77 @@ const db = new sqlite3.Database("reservations.db", (err) => {
 });
 
 // Socket.IO connection handling
-io.on("connection", (socket) => {
+// Variabel untuk menyimpan cache dan timestamp
+let statsCache = null;
+let lastCacheTime = 0;
+const CACHE_TTL = 60 * 1000; // TTL: 60 detik
+
+// Fungsi untuk memperbarui cache dengan query database
+const updateCache = async () => {
+  try {
+    const [maleRows, femaleRows] = await Promise.all([
+      new Promise((resolve, reject) => {
+        db.all(
+          "SELECT name, email, city, number, gender FROM reservations WHERE gender = 'laki-laki'",
+          (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          }
+        );
+      }),
+      new Promise((resolve, reject) => {
+        db.all(
+          "SELECT name, email, city, number, gender FROM reservations WHERE gender = 'perempuan'",
+          (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          }
+        );
+      }),
+    ]);
+
+    // Membuat set untuk menghilangkan duplikasi
+    const maleSet = new Set(
+      maleRows.map(
+        (row) => `${row.name}${row.email}${row.city}${row.number}${row.gender}`
+      )
+    );
+    const femaleSet = new Set(
+      femaleRows.map(
+        (row) => `${row.name}${row.email}${row.city}${row.number}${row.gender}`
+      )
+    );
+
+    // Menghitung jumlah berdasarkan set
+    const maleCount = maleSet.size;
+    const femaleCount = femaleSet.size;
+    const totalCount = maleCount + femaleCount;
+
+    // Menyimpan hasil ke cache dan memperbarui timestamp
+    statsCache = { total: totalCount, male: maleCount, female: femaleCount };
+    lastCacheTime = Date.now();
+  } catch (error) {
+    console.error("Error fetching stats:", error);
+  }
+};
+
+// Fungsi untuk mendapatkan statistik, menggunakan cache jika masih berlaku
+const getStats = async () => {
+  if (statsCache && Date.now() - lastCacheTime < CACHE_TTL) {
+    return statsCache;
+  }
+  await updateCache();
+  return statsCache;
+};
+
+// Socket.io connection handler
+io.on("connection", async (socket) => {
   console.log("Client connected");
 
-  // Cache configuration
-  let statsCache = {
-    data: null,
-    lastUpdated: null,
-  };
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+  // Mengirim data statistik dari cache atau hasil query terbaru
+  const stats = await getStats();
+  socket.emit("stats", stats);
 
-  // Function to emit updated statistics
-  const emitStats = async () => {
-    try {
-      const currentTime = Date.now();
-
-      // Check if cache is valid
-      if (
-        statsCache.data &&
-        statsCache.lastUpdated &&
-        currentTime - statsCache.lastUpdated < CACHE_DURATION
-      ) {
-        socket.emit("stats", statsCache.data);
-        return;
-      }
-
-      const [maleRows, femaleRows] = await Promise.all([
-        new Promise((resolve, reject) => {
-          db.all(
-            "SELECT name, email, city, number, gender FROM reservations WHERE gender = 'laki-laki'",
-            (err, rows) => {
-              if (err) reject(err);
-              else resolve(rows);
-            }
-          );
-        }),
-        new Promise((resolve, reject) => {
-          db.all(
-            "SELECT name, email, city, number, gender FROM reservations WHERE gender = 'perempuan'",
-            (err, rows) => {
-              if (err) reject(err);
-              else resolve(rows);
-            }
-          );
-        }),
-      ]);
-
-      const maleSet = new Set(
-        maleRows.map(
-          (row) =>
-            `${row.name}${row.email}${row.city}${row.number}${row.gender}`
-        )
-      );
-      const femaleSet = new Set(
-        femaleRows.map(
-          (row) =>
-            `${row.name}${row.email}${row.city}${row.number}${row.gender}`
-        )
-      );
-
-      const maleCount = maleSet.size;
-      const femaleCount = femaleSet.size;
-      const totalCount = maleCount + femaleCount;
-
-      const stats = {
-        total: totalCount,
-        male: maleCount,
-        female: femaleCount,
-      };
-
-      // Update cache
-      statsCache.data = stats;
-      statsCache.lastUpdated = currentTime;
-
-      socket.emit("stats", stats);
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
-
-  // Emit initial stats
-  emitStats();
-
-  // Clean up on disconnect
   socket.on("disconnect", () => {
     console.log("Client disconnected");
   });
@@ -232,77 +220,117 @@ app.get("/itikaf/sisa-kuota", (req, res) => {
 });
 
 app.get("/itikaf/quota-data", async (req, res) => {
-  const today = new Date("2025-03-20");
-  const endDate = new Date("2025-03-29");
+  // Tentukan tanggal awal dan akhir dalam format string
+  const startDateStr = "2025-03-20";
+  const endDateStr = "2025-03-29";
+
+  // Buat array tanggal antara startDate dan endDate
   const dates = [];
-
-  for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const currentDate = d.toISOString().split("T")[0];
-    dates.push(currentDate);
+  let current = new Date(startDateStr);
+  const endDate = new Date(endDateStr);
+  while (current <= endDate) {
+    dates.push(current.toISOString().split("T")[0]);
+    current.setDate(current.getDate() + 1);
   }
 
-  const quotaData = [];
+  // Query tunggal untuk mendapatkan data semua tanggal sekaligus
+  const query = `
+    SELECT reservation_date, 
+           COUNT(*) as total,
+           SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) as male,
+           SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female
+    FROM reservations 
+    WHERE reservation_date BETWEEN ? AND ? 
+      AND pendaftaran = ?
+    GROUP BY reservation_date;
+  `;
 
-  for (const date of dates) {
-    const data = await new Promise((resolve, reject) => {
-      db.get(
-        "SELECT COUNT(*) as total, " +
-          "SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) as male, " +
-          "SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female " +
-          "FROM reservations WHERE reservation_date = ? AND pendaftaran = ?",
-        [date, "online"],
-        (err, row) => {
-          if (err) reject(err);
-          resolve({
-            date,
-            total: row.total || 0,
-            male: row.male || 0,
-            female: row.female || 0,
-          });
-        }
-      );
+  // Menggunakan db.all untuk mengeksekusi query dan mengambil field-group
+  const rows = await new Promise((resolve, reject) => {
+    db.all(query, [startDateStr, endDateStr, "online"], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows);
     });
-    quotaData.push(data);
-  }
+  });
+
+  // Membuat lookup table berdasarkan tanggal untuk akses cepat
+  const dataMap = {};
+  rows.forEach((row) => {
+    dataMap[row.reservation_date] = {
+      total: row.total || 0,
+      male: row.male || 0,
+      female: row.female || 0,
+    };
+  });
+
+  // Bangun array hasil dengan memastikan setiap tanggal memiliki entri (default 0 jika tidak ada data)
+  const quotaData = dates.map((date) => {
+    return {
+      date,
+      total: dataMap[date] ? dataMap[date].total : 0,
+      male: dataMap[date] ? dataMap[date].male : 0,
+      female: dataMap[date] ? dataMap[date].female : 0,
+    };
+  });
 
   res.json(quotaData);
 });
 
 app.get("/itikaf/quota-data-offline", async (req, res) => {
-  const today = new Date("2025-03-20");
-  const endDate = new Date("2025-03-29");
+  const startDateStr = "2025-03-20";
+  const endDateStr = "2025-03-29";
+
+  // Buat array tanggal antara startDate dan endDate
   const dates = [];
-
-  for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const currentDate = d.toISOString().split("T")[0];
-    dates.push(currentDate);
+  let current = new Date(startDateStr);
+  const endDate = new Date(endDateStr);
+  while (current <= endDate) {
+    dates.push(current.toISOString().split("T")[0]);
+    current.setDate(current.getDate() + 1);
   }
 
-  const quotaData = [];
+  // Query tunggal untuk mengambil data registrasi 'offline' antara dua tanggal
+  const query = `
+    SELECT reservation_date, 
+           COUNT(*) AS total,
+           SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) AS male,
+           SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) AS female
+    FROM reservations
+    WHERE reservation_date BETWEEN ? AND ?
+      AND pendaftaran = ?
+    GROUP BY reservation_date;
+  `;
 
-  for (const date of dates) {
-    const data = await new Promise((resolve, reject) => {
-      db.get(
-        "SELECT COUNT(*) as total, " +
-          "SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) as male, " +
-          "SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female " +
-          "FROM reservations WHERE reservation_date = ? AND pendaftaran = ?",
-        [date, "offline"],
-        (err, row) => {
-          if (err) reject(err);
-          resolve({
-            date,
-            total: row.total || 0,
-            male: row.male || 0,
-            female: row.female || 0,
-          });
-        }
-      );
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(query, [startDateStr, endDateStr, "offline"], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
     });
-    quotaData.push(data);
-  }
 
-  res.json(quotaData);
+    // Buat lookup table dari hasil query
+    const dataMap = {};
+    rows.forEach((row) => {
+      dataMap[row.reservation_date] = {
+        total: row.total || 0,
+        male: row.male || 0,
+        female: row.female || 0,
+      };
+    });
+
+    // Buat output dengan memastikan semua tanggal terwakili, walaupun data kosong di database
+    const quotaData = dates.map((date) => ({
+      date,
+      total: dataMap[date] ? dataMap[date].total : 0,
+      male: dataMap[date] ? dataMap[date].male : 0,
+      female: dataMap[date] ? dataMap[date].female : 0,
+    }));
+
+    res.json(quotaData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Admin routes
@@ -468,15 +496,15 @@ app.get("/itikaf/register", (req, res) => {
   res.render("register");
 });
 
-app.post("/itikaf/register", (req, res) => {
+app.post("/itikaf/register", async (req, res) => {
   const { name, email, gender, city, number, reservation_date } = req.body;
   const pendaftaran = "online";
-  const maleLimit = 75;
-  const femaleLimit = 100;
-  const qrAttachments = [];
+  const limits = { "laki-laki": 75, perempuan: 100 };
+  const limit = limits[gender];
+  let qrAttachments = [];
   const tutorBatal = `${req.protocol}://${req.get("host")}/cancel-tutorial`;
 
-  // helper function
+  // Helper function untuk format tanggal
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const months = [
@@ -496,19 +524,17 @@ app.post("/itikaf/register", (req, res) => {
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   };
 
-  // helper function to generate QR Code
+  // Pastikan direktori 'temp' ada
+  const tempDir = path.join(__dirname, "temp");
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir);
+  }
+
+  // Helper function untuk generate QR Code
   const generateQRCode = async (id, date) => {
     const fileName = `${formatDate(date)}_${name}.png`;
-    const filePath = path.join(__dirname, "temp", fileName);
-
-    // Ensure temp dirextory exists
-    if (!fs.existsSync(path.join(__dirname, "temp"))) {
-      fs.mkdirSync(path.join(__dirname, "temp"));
-    }
-
-    // generate qr code
+    const filePath = path.join(tempDir, fileName);
     await QRCode.toFile(filePath, id);
-
     return {
       filename: fileName,
       path: filePath,
@@ -516,103 +542,88 @@ app.post("/itikaf/register", (req, res) => {
     };
   };
 
-  // Begin transaction
-  db.serialize(() => {
-    db.run("BEGIN TRANSACTION");
+  // Fungsi pembungkus transaksi agar bisa dipakai dengan async/await
+  const beginTransaction = () =>
+    new Promise((resolve, reject) => {
+      db.run("BEGIN TRANSACTION", (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+  const commitTransaction = () =>
+    new Promise((resolve, reject) => {
+      db.run("COMMIT", (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+  const rollbackTransaction = () =>
+    new Promise((resolve) => {
+      db.run("ROLLBACK", () => resolve());
+    });
 
-    let hasError = false;
-    let quotaError = false;
-    let errorDate = null;
+  try {
+    // Mulai transaksi
+    await beginTransaction();
 
-    // Check quota for all selected dates
-    const checkQuotas = reservation_date.map((date) => {
-      return new Promise((resolve, reject) => {
-        db.get(
-          "SELECT COUNT(*) as count FROM reservations WHERE reservation_date = ? AND gender = ? AND pendaftaran = ?",
-          [date, gender, pendaftaran],
-          (err, genderRow) => {
-            if (err) {
-              hasError = true;
-              reject(err);
-            } else {
-              const currentCount = genderRow.count;
-              const limit = gender === "laki-laki" ? maleLimit : femaleLimit;
-              if (currentCount >= limit) {
-                quotaError = true;
-                errorDate = formatDate(date);
-                reject(new Error(`Quota exceeded for date ${date}`));
-              } else {
-                resolve();
-              }
-            }
-          }
-        );
+    // Cek quota secara agregat untuk semua tanggal sekaligus
+    const placeholders = reservation_date.map(() => "?").join(",");
+    const checkQuotaQuery = `
+      SELECT reservation_date, COUNT(*) as count
+      FROM reservations
+      WHERE reservation_date IN (${placeholders})
+        AND gender = ?
+        AND pendaftaran = ?
+      GROUP BY reservation_date
+    `;
+    const checkParams = [...reservation_date, gender, pendaftaran];
+    const quotaRows = await new Promise((resolve, reject) => {
+      db.all(checkQuotaQuery, checkParams, (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
       });
     });
 
-    Promise.all(checkQuotas)
-      .then(() => {
-        // If all quota checks pass, insert reservations for each date
-        const insertPromises = reservation_date.map((date) => {
-          const id = uuidv4();
-          return new Promise(async (resolve, reject) => {
-            try {
-              // generate qr code first
-              if (email != "-") {
-                const qrAttachment = await generateQRCode(id, date);
-                qrAttachments.push(qrAttachment);
-              }
+    // Buat lookup table untuk quota per tanggal
+    const quotaMap = {};
+    quotaRows.forEach((row) => {
+      quotaMap[row.reservation_date] = row.count;
+    });
 
-              // then insert into database
-              db.run(
-                "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [
-                  id,
-                  name,
-                  email,
-                  city,
-                  number,
-                  gender,
-                  date,
-                  false,
-                  pendaftaran,
-                ],
-                (err) => {
-                  if (err) {
-                    hasError = true;
-                    reject(err);
-                  } else {
-                    resolve();
-                  }
-                }
-              );
-            } catch (error) {
-              hasError = true;
-              reject(error);
-            }
-          });
-        });
+    for (const date of reservation_date) {
+      const count = quotaMap[date] || 0;
+      if (count >= limit) {
+        throw new Error(`Quota exceeded for date ${formatDate(date)}`);
+      }
+    }
 
-        return Promise.all(insertPromises);
-      })
-      .then(async () => {
-        if (hasError) {
-          // Delete all QR codes if there's an error
-          qrAttachments.forEach((attachment) => {
-            if (fs.existsSync(attachment.path)) {
-              fs.unlinkSync(attachment.path);
-            }
-          });
-          db.run("ROLLBACK");
-          return res.status(500).json({ error: "Database error" });
-        }
+    // Lakukan insert untuk setiap reservation
+    for (const date of reservation_date) {
+      const id = uuidv4();
+      // Generate QR Code hanya jika email valid (tidak sama dengan "-")
+      if (email !== "-") {
+        const qrAttachment = await generateQRCode(id, date);
+        qrAttachments.push(qrAttachment);
+      }
+      await new Promise((resolve, reject) => {
+        db.run(
+          "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [id, name, email, city, number, gender, date, false, pendaftaran],
+          (err) => {
+            if (err) return reject(err);
+            resolve();
+          }
+        );
+      });
+    }
 
-        // send email with qr codes
-        const mailOptions = {
-          from: "badarmsaofficial@gmail.com",
-          to: email,
-          subject: "QR Code pendaftaran Itikaf",
-          html: `
+    // Kirim email dengan QR Code (jika diperlukan)
+    if (email !== "-") {
+      const mailOptions = {
+        from: "badarmsaofficial@gmail.com",
+        to: email,
+        subject: "QR Code pendaftaran Itikaf",
+        html: `
           <!DOCTYPE html>
           <html>
           <head>
@@ -647,51 +658,37 @@ app.post("/itikaf/register", (req, res) => {
             </div>
           </body>
           </html>
-          `,
-          attachments: qrAttachments,
-        };
+        `,
+        attachments: qrAttachments,
+      };
 
-        try {
-          if (email != "-") {
-            await transporter.sendMail(mailOptions);
-
-            // Delete all QR codes after email is sent
-            qrAttachments.forEach((attachment) => {
-              if (fs.existsSync(attachment.path)) {
-                fs.unlinkSync(attachment.path);
-              }
-            });
-          }
-
-          db.run("COMMIT");
-          io.emit("statsUpdate");
-          res.redirect("/itikaf");
-        } catch (error) {
-          console.error("Error sending email: ", error);
-          db.run("ROLLBACK");
-          res.status(500).json({
-            error: "Gagal mengirim email (coba periksa kembali email anda)",
-          });
+      await transporter.sendMail(mailOptions);
+      // Hapus file QR setelah email terkirim
+      qrAttachments.forEach((attachment) => {
+        if (fs.existsSync(attachment.path)) {
+          fs.unlinkSync(attachment.path);
         }
-      })
-      .catch((error) => {
-        // Clean up generated QR code
-        qrAttachments.forEach((attachment) => {
-          if (fs.existsSync(attachment.path)) {
-            fs.unlinkSync(attachment.path);
-          }
-        });
-
-        db.run("ROLLBACK");
-        if (quotaError) {
-          return res.status(400).json({
-            error: `Maaf, kuota untuk ${gender} pada tanggal ${errorDate} sudah penuh`,
-          });
-        }
-        console.error(error);
-        return res.status(500).json({ error: "Database error" });
       });
-  });
+    }
+
+    // Commit transaksi
+    await commitTransaction();
+    io.emit("statsUpdate");
+    return res.redirect("/itikaf");
+  } catch (error) {
+    // Jika terjadi error, rollback dan hapus file QR (jika ada)
+    await rollbackTransaction();
+    qrAttachments.forEach((attachment) => {
+      if (fs.existsSync(attachment.path)) {
+        fs.unlinkSync(attachment.path);
+      }
+    });
+    console.error("Error during registration:", error);
+    if (error.message.startsWith("Quota exceeded")) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Database error" });
+  }
 });
 
 app.get("/itikaf/batal-daftar", (req, res) => {
