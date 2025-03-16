@@ -449,6 +449,7 @@ app.post("/itikaf/register", (req, res) => {
   const maleLimit = 75;
   const femaleLimit = 100;
   const qrAttachments = [];
+  const tutorBatal = `${req.protocol}://${req.get("host")}/cancel-tutorial`;
 
   // helper function
   const formatDate = (dateString) => {
@@ -609,6 +610,10 @@ app.post("/itikaf/register", (req, res) => {
                 <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
                 <div class="qr-info">
                   <p style="margin: 0; text-align: center;">Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
+                </div>
+                <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                  <p style="color: #666;">Untuk informasi cara pembatalan pendaftaran, silakan kunjungi:</p>
+                  <a href="${tutorBatal}" style="color: #4CAF50; text-decoration: none; font-weight: 500;">Tutorial Pembatalan Pendaftaran</a>
                 </div>
                 <div class="footer">
                   <p>Email ini dikirim secara otomatis, mohon untuk tidak membalas email ini.</p>
