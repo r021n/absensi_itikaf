@@ -186,12 +186,21 @@
           const male = type == "online" ? 75 : 25;
           const female = type == "online" ? 100 : 25;
 
-          row.innerHTML = `
-                        <td>${dataText}</td>
-                        <td>${male - item.male}</td>
-                        <td>${female - item.female}</td>
-                    `;
-          element.appendChild(row);
+          if (type == "online") {
+            row.innerHTML = `
+                          <td>${dataText}</td>
+                          <td>${male - item.male}</td>
+                          <td>${female - item.female}</td>
+                      `;
+            element.appendChild(row);
+          } else {
+            row.innerHTML = `
+                          <td>${dataText}</td>
+                          <td>${male}</td>
+                          <td>${female}</td>
+                      `;
+            element.appendChild(row);
+          }
         });
       }
       document.addEventListener("DOMContentLoaded", async () => {
