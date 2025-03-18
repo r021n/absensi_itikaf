@@ -501,10 +501,8 @@ app.post("/itikaf/register", async (req, res) => {
   const pendaftaran = "online";
   const limits = { "laki-laki": 75, perempuan: 100 };
   const limit = limits[gender];
-  let qrAttachments = [];
   const tutorBatal = `${req.protocol}://${req.get("host")}/cancel-tutorial`;
 
-  // Helper function untuk format tanggal
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const months = [
@@ -524,25 +522,6 @@ app.post("/itikaf/register", async (req, res) => {
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   };
 
-  // Pastikan direktori 'temp' ada
-  const tempDir = path.join(__dirname, "temp");
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir);
-  }
-
-  // Helper function untuk generate QR Code
-  const generateQRCode = async (id, date) => {
-    const fileName = `${formatDate(date)}_${name}.png`;
-    const filePath = path.join(tempDir, fileName);
-    await QRCode.toFile(filePath, id);
-    return {
-      filename: fileName,
-      path: filePath,
-      cid: id,
-    };
-  };
-
-  // Fungsi pembungkus transaksi agar bisa dipakai dengan async/await
   const beginTransaction = () =>
     new Promise((resolve, reject) => {
       db.run("BEGIN TRANSACTION", (err) => {
@@ -563,19 +542,19 @@ app.post("/itikaf/register", async (req, res) => {
     });
 
   try {
-    // Mulai transaksi
+    // Mulai transaksi dan lakukan insert data
     await beginTransaction();
 
-    // Cek quota secara agregat untuk semua tanggal sekaligus
+    // Cek quota secara agregat
     const placeholders = reservation_date.map(() => "?").join(",");
     const checkQuotaQuery = `
-      SELECT reservation_date, COUNT(*) as count
-      FROM reservations
-      WHERE reservation_date IN (${placeholders})
-        AND gender = ?
-        AND pendaftaran = ?
-      GROUP BY reservation_date
-    `;
+        SELECT reservation_date, COUNT(*) as count
+        FROM reservations
+        WHERE reservation_date IN (${placeholders})
+          AND gender = ?
+          AND pendaftaran = ?
+        GROUP BY reservation_date
+      `;
     const checkParams = [...reservation_date, gender, pendaftaran];
     const quotaRows = await new Promise((resolve, reject) => {
       db.all(checkQuotaQuery, checkParams, (err, rows) => {
@@ -583,28 +562,20 @@ app.post("/itikaf/register", async (req, res) => {
         resolve(rows);
       });
     });
-
-    // Buat lookup table untuk quota per tanggal
     const quotaMap = {};
     quotaRows.forEach((row) => {
       quotaMap[row.reservation_date] = row.count;
     });
-
     for (const date of reservation_date) {
       const count = quotaMap[date] || 0;
       if (count >= limit) {
-        throw new Error(`Quota exceeded for date ${formatDate(date)}`);
+        throw new Error(`kuota untuk ${formatDate(date)} sudah penuh`);
       }
     }
 
     // Lakukan insert untuk setiap reservation
     for (const date of reservation_date) {
       const id = uuidv4();
-      // Generate QR Code hanya jika email valid (tidak sama dengan "-")
-      if (email !== "-") {
-        const qrAttachment = await generateQRCode(id, date);
-        qrAttachments.push(qrAttachment);
-      }
       await new Promise((resolve, reject) => {
         db.run(
           "INSERT INTO reservations (id, name, email, city, number, gender, reservation_date, kehadiran, pendaftaran) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -617,74 +588,15 @@ app.post("/itikaf/register", async (req, res) => {
       });
     }
 
-    // Kirim email dengan QR Code (jika diperlukan)
-    if (email !== "-") {
-      const mailOptions = {
-        from: "badarmsaofficial@gmail.com",
-        to: email,
-        subject: "QR Code pendaftaran Itikaf",
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
-              .email-container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
-              .header { background-color: #4CAF50; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-              .content { background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-              .qr-info { margin: 20px 0; padding: 15px; background-color: #e8f5e9; border-radius: 5px; }
-              .footer { margin-top: 20px; font-size: 14px; color: #666; text-align: center; }
-            </style>
-          </head>
-          <body>
-            <div class="email-container">
-              <div class="header">
-                <h2 style="margin: 0;">QR Code Pendaftaran Itikaf</h2>
-              </div>
-              <div class="content">
-                <p>Assalamu'alaikum Wr. Wb.</p>
-                <p>Terima kasih telah mendaftar itikaf. Berikut adalah QR Code untuk kehadiran Anda:</p>
-                <div class="qr-info">
-                  <p style="margin: 0; text-align: center;">Silakan tunjukkan QR Code ini saat hadir di lokasi.</p>
-                </div>
-                <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-                  <p style="color: #666;">Untuk informasi cara pembatalan pendaftaran, silakan kunjungi:</p>
-                  <a href="${tutorBatal}" style="color: #4CAF50; text-decoration: none; font-weight: 500;">Tutorial Pembatalan Pendaftaran</a>
-                </div>
-                <div class="footer">
-                  <p>Email ini dikirim secara otomatis, mohon untuk tidak membalas email ini.</p>
-                </div>
-              </div>
-            </div>
-          </body>
-          </html>
-        `,
-        attachments: qrAttachments,
-      };
-
-      await transporter.sendMail(mailOptions);
-      // Hapus file QR setelah email terkirim
-      qrAttachments.forEach((attachment) => {
-        if (fs.existsSync(attachment.path)) {
-          fs.unlinkSync(attachment.path);
-        }
-      });
-    }
-
-    // Commit transaksi
+    // Commit transaksi terlebih dahulu
     await commitTransaction();
     io.emit("statsUpdate");
+
     return res.redirect("/itikaf");
   } catch (error) {
-    // Jika terjadi error, rollback dan hapus file QR (jika ada)
     await rollbackTransaction();
-    qrAttachments.forEach((attachment) => {
-      if (fs.existsSync(attachment.path)) {
-        fs.unlinkSync(attachment.path);
-      }
-    });
     console.error("Error during registration:", error);
-    if (error.message.startsWith("Quota exceeded")) {
+    if (error.message.startsWith("kuota untuk")) {
       return res.status(400).json({ error: error.message });
     }
     return res.status(500).json({ error: "Database error" });
@@ -698,8 +610,8 @@ app.get("/itikaf/batal-daftar", (req, res) => {
 app.get("/itikaf/search-registrants", (req, res) => {
   const searchName = req.query.name;
   db.all(
-    "SELECT * FROM reservations WHERE name LIKE ? AND pendaftaran = ?",
-    [`%${searchName}%`, "online"],
+    "SELECT * FROM reservations WHERE name LIKE ?",
+    [`%${searchName}%`],
     (err, rows) => {
       if (err) {
         console.error(err);
