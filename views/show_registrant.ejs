@@ -411,9 +411,14 @@
       // Load initial data
       loadRegistrants();
 
+      let debounceTimeout;
+
       // Add search input event listener
       document.getElementById("search").addEventListener("input", function (e) {
-        applyFilters();
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+          applyFilters();
+        }, 1000);
       });
 
       function formatDate(dateString) {
