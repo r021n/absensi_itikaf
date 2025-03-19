@@ -219,6 +219,36 @@ app.get("/itikaf/sisa-kuota", (req, res) => {
   res.render("sisa_kuota");
 });
 
+app.get("/itikaf/sisa/:tanggal", async (req, res) => {
+  let tanggal = req.params.tanggal; // bisa berupa "20" atau "2025-03-20"
+
+  // Jika parameter hanya terdiri dari 1-2 digit, asumsikan itu adalah hari di bulan Maret 2025
+  if (tanggal.length <= 2) {
+    if (tanggal.length === 1) {
+      tanggal = "0" + tanggal;
+    }
+    tanggal = `2025-03-${tanggal}`;
+  }
+
+  const query = `
+    SELECT 
+      SUM(CASE WHEN gender = 'laki-laki' THEN 1 ELSE 0 END) as male,
+      SUM(CASE WHEN gender = 'perempuan' THEN 1 ELSE 0 END) as female
+    FROM reservations 
+    WHERE reservation_date = ?
+  `;
+
+  db.get(query, [tanggal], (err, row) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    const male = row && row.male ? row.male : 0;
+    const female = row && row.female ? row.female : 0;
+    res.render("sisa_hari_ini", { date: tanggal, male, female });
+  });
+});
+
 app.get("/itikaf/quota-data", async (req, res) => {
   // Tentukan tanggal awal dan akhir dalam format string
   const startDateStr = "2025-03-20";
